@@ -39,6 +39,7 @@
 #include "nvvk/renderpasses_vk.hpp"
 
 #include "nvvk/buffers_vk.hpp"
+#include <SimVisData.hpp>
 
 extern std::vector<std::string> defaultSearchPaths;
 
@@ -214,6 +215,8 @@ void HelloVulkan::loadModel(const std::string& filename, nvmath::mat4f transform
   }
 
   ObjModel model;
+
+
   model.nbIndices  = static_cast<uint32_t>(loader.m_indices.size());
   model.nbVertices = static_cast<uint32_t>(loader.m_vertices.size());
 
@@ -230,6 +233,119 @@ void HelloVulkan::loadModel(const std::string& filename, nvmath::mat4f transform
   // Creates all textures found and find the offset for this model
   auto txtOffset = static_cast<uint32_t>(m_textures.size());
   createTextureImages(cmdBuf, loader.m_textures);
+  cmdBufGet.submitAndWait(cmdBuf);
+  m_alloc.finalizeAndReleaseStaging();
+
+  std::string objNb = std::to_string(m_objModel.size());
+  m_debug.setObjectName(model.vertexBuffer.buffer, (std::string("vertex_" + objNb)));
+  m_debug.setObjectName(model.indexBuffer.buffer, (std::string("index_" + objNb)));
+  m_debug.setObjectName(model.matColorBuffer.buffer, (std::string("mat_" + objNb)));
+  m_debug.setObjectName(model.matIndexBuffer.buffer, (std::string("matIdx_" + objNb)));
+
+  // Keeping transformation matrix of the instance
+  ObjInstance instance;
+  instance.transform = transform;
+  instance.objIndex  = static_cast<uint32_t>(m_objModel.size());
+  m_instances.push_back(instance);
+
+  // Creating information for device access
+  ObjDesc desc;
+  desc.txtOffset            = txtOffset;
+  desc.vertexAddress        = nvvk::getBufferDeviceAddress(m_device, model.vertexBuffer.buffer);
+  desc.indexAddress         = nvvk::getBufferDeviceAddress(m_device, model.indexBuffer.buffer);
+  desc.materialAddress      = nvvk::getBufferDeviceAddress(m_device, model.matColorBuffer.buffer);
+  desc.materialIndexAddress = nvvk::getBufferDeviceAddress(m_device, model.matIndexBuffer.buffer);
+
+  // Keeping the obj host model and device description
+  m_objModel.emplace_back(model);
+  m_objDesc.emplace_back(desc);
+}
+
+
+// -------------------------------------------------------------------------------------------------
+// Loading the DAT file and setting up all buffers
+//
+
+void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transform)
+{
+  //return;
+  SimVisDataPtr simVisPtr = SimVisData::loadFromFile(filePath);
+  std::vector<MaterialObj> materials(128, MaterialObj());
+  std::vector<std::string> textures;
+
+  int numCellsX = simVisPtr->numCellsX;
+  int numCellsY = simVisPtr->numCellsY;
+  int numCellsZ = simVisPtr->numCellsZ;
+  
+  
+  std::vector<int32_t> matIndx((numCellsZ + 1) * (numCellsY + 1) * (numCellsX + 1), 0);
+
+  std::vector<VertexObj> vertices(simVisPtr->vertices.size());
+  for(size_t i = 0; i < simVisPtr->vertices.size(); ++i)
+  {
+    VertexObj& v = vertices[i];
+        
+    v.pos.x = simVisPtr->vertices[i].x;
+    v.pos.y = simVisPtr->vertices[i].y;
+    v.pos.z = simVisPtr->vertices[i].z;    
+    
+    v.color = vec3(1, 0, 0);
+    v.nrm   = vec3(0, 1, 0);
+    v.texCoord = vec2(1, 1);
+
+  }
+
+  for(uint32_t z = 0; z < numCellsZ; z++)
+  {
+    for(uint32_t y = 0; y < numCellsY; y++)
+    {
+      for(uint32_t x = 0; x < numCellsX; x++)
+      {
+        VertexObj& v = vertices[PT_IDXn(x, y, z)];
+        v.atr        = simVisPtr->attributesList[0][z * numCellsY * numCellsX + y * numCellsX + x];
+      }
+    }
+  }
+
+  //constexpr size_t maxCellIndices = 64 * 64 ;//  64 + 16 + 1;
+
+  size_t s = simVisPtr->cellIndices.size();
+  //std::min(simVisPtr->cellIndices.size(), maxCellIndices);
+  std::vector<int> indices;
+  for(int i = 0; i < s; i += 8)
+  {
+    indices.insert(indices.end(), {simVisPtr->cellIndices[i + 0], simVisPtr->cellIndices[i + 2], simVisPtr->cellIndices[i + 1]});  ///
+    indices.insert(indices.end(), {simVisPtr->cellIndices[i + 0], simVisPtr->cellIndices[i + 3], simVisPtr->cellIndices[i + 2]});  ///
+    indices.insert(indices.end(), {simVisPtr->cellIndices[i + 0], simVisPtr->cellIndices[i + 4], simVisPtr->cellIndices[i + 3]});  ///
+    indices.insert(indices.end(), {simVisPtr->cellIndices[i + 3], simVisPtr->cellIndices[i + 4], simVisPtr->cellIndices[i + 7]});  ///
+    indices.insert(indices.end(), {simVisPtr->cellIndices[i + 0], simVisPtr->cellIndices[i + 1], simVisPtr->cellIndices[i + 4]});  ///
+    indices.insert(indices.end(), {simVisPtr->cellIndices[i + 1], simVisPtr->cellIndices[i + 5], simVisPtr->cellIndices[i + 4]});  ///
+    indices.insert(indices.end(), {simVisPtr->cellIndices[i + 4], simVisPtr->cellIndices[i + 5], simVisPtr->cellIndices[i + 6]});  ///
+    indices.insert(indices.end(), {simVisPtr->cellIndices[i + 4], simVisPtr->cellIndices[i + 6], simVisPtr->cellIndices[i + 7]});  ///
+    indices.insert(indices.end(), {simVisPtr->cellIndices[i + 1], simVisPtr->cellIndices[i + 2], simVisPtr->cellIndices[i + 6]});  ///
+    indices.insert(indices.end(), {simVisPtr->cellIndices[i + 1], simVisPtr->cellIndices[i + 6], simVisPtr->cellIndices[i + 5]});  ///
+    indices.insert(indices.end(), {simVisPtr->cellIndices[i + 2], simVisPtr->cellIndices[i + 3], simVisPtr->cellIndices[i + 7]});  ///
+    indices.insert(indices.end(), {simVisPtr->cellIndices[i + 2], simVisPtr->cellIndices[i + 7], simVisPtr->cellIndices[i + 6]});  ///
+  }
+
+  ObjModel model;
+  model.nbIndices  = static_cast<uint32_t>(indices.size());
+  model.nbVertices = static_cast<uint32_t>(simVisPtr->vertices.size());
+  
+  // Create the buffers on Device and copy vertices, indices and materials
+  nvvk::CommandPool  cmdBufGet(m_device, m_graphicsQueueIndex);
+  VkCommandBuffer    cmdBuf          = cmdBufGet.createCommandBuffer();
+  VkBufferUsageFlags flag            = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+  VkBufferUsageFlags rayTracingFlags =  // used also for building acceleration structures
+      flag | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+  model.vertexBuffer = m_alloc.createBuffer(cmdBuf, vertices, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | rayTracingFlags);
+  model.indexBuffer = m_alloc.createBuffer(cmdBuf, indices, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | rayTracingFlags);
+  model.matColorBuffer = m_alloc.createBuffer(cmdBuf, materials, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | flag);
+  model.matIndexBuffer = m_alloc.createBuffer(cmdBuf, matIndx, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | flag);
+  
+  // Creates all textures found and find the offset for this model
+  auto txtOffset = 0;
+  createTextureImages(cmdBuf, textures);
   cmdBufGet.submitAndWait(cmdBuf);
   m_alloc.finalizeAndReleaseStaging();
 

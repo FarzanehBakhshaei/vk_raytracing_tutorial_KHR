@@ -247,7 +247,6 @@ void HelloVulkan::loadModel(const std::string& filename, nvmath::mat4f transform
   m_objDesc.emplace_back(desc);
 }
 
-
 //--------------------------------------------------------------------------------------------------
 // Creating the uniform buffer holding the camera matrices
 // - Buffer is host visible

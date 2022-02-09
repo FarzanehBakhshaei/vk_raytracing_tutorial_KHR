@@ -189,10 +189,13 @@ int main(int argc, char** argv)
   helloVk.initGUI(0);  // Using sub-pass 0
 
   // Creation of the example
-  helloVk.loadModel(nvh::findFile("media/scenes/Medieval_building.obj", defaultSearchPaths, true));
-  helloVk.loadModel(nvh::findFile("media/scenes/plane.obj", defaultSearchPaths, true));
-  helloVk.loadModel(nvh::findFile("media/scenes/wuson.obj", defaultSearchPaths, true),
-                    nvmath::scale_mat4(nvmath::vec3f(0.5f)) * nvmath::translation_mat4(nvmath::vec3f(0.0f, 0.0f, 6.0f)));
+  //helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData1_snapshot.dat", defaultSearchPaths, true).c_str());
+  helloVk.loadVolumetricData(nvh::findFile("media/scenes/kitten_132_115_200_its500.dat", defaultSearchPaths, true).c_str());
+
+  //helloVk.loadModel(nvh::findFile("media/scenes/Medieval_building.obj", defaultSearchPaths, true));
+  //helloVk.loadModel(nvh::findFile("media/scenes/plane.obj", defaultSearchPaths, true));
+  //helloVk.loadModel(nvh::findFile("media/scenes/wuson.obj", defaultSearchPaths, true),
+                    //nvmath::scale_mat4(nvmath::vec3f(0.5f)) * nvmath::translation_mat4(nvmath::vec3f(0.0f, 0.0f, 6.0f)));
 
   std::random_device              rd;         // Will be used to obtain a seed for the random number engine
   std::mt19937                    gen(rd());  // Standard mersenne_twister_engine seeded with rd()
@@ -200,7 +203,7 @@ int main(int argc, char** argv)
   std::normal_distribution<float> disn(0.5f, 0.2f);
   auto                            wusonIndex = static_cast<int>(helloVk.m_objModel.size() - 1);
 
-  for(int n = 0; n < 50; ++n)
+  /* for(int n = 0; n < 50; ++n)
   {
     ObjInstance inst;
     inst.objIndex       = wusonIndex;
@@ -212,7 +215,7 @@ int main(int argc, char** argv)
 
     helloVk.m_instances.push_back(inst);
   }
-
+  */
   // Creation of implicit geometry
   MaterialObj mat;
   // Reflective

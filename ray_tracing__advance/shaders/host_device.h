@@ -106,6 +106,7 @@ struct Vertex  // See ObjLoader, copy of VertexObj, could be compressed for devi
   vec3 nrm;
   vec3 color;
   vec2 texCoord;
+  float atr;
 };
 
 struct WaveFrontMaterial  // See ObjLoader, copy of MaterialObj, could be compressed for device

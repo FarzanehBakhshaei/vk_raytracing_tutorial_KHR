@@ -30,6 +30,7 @@
 #include "nvvk/raytraceKHR_vk.hpp"
 #include "nvvk/sbtwrapper_vk.hpp"
 
+
 //--------------------------------------------------------------------------------------------------
 // Simple rasterizer of OBJ objects
 // - Each OBJ loaded are stored in an `ObjModel` and referenced by a `ObjInstance`

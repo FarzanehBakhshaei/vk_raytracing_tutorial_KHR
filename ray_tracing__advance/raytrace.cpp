@@ -149,9 +149,9 @@ void Raytracer::createBottomLevelAS(std::vector<ObjModel>& models, ImplInst& imp
     implicitObj.blasId = static_cast<int>(allBlas.size() - 1);  // remember blas ID for tlas
   }
 
-
-  m_rtBuilder.buildBlas(allBlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR
-                                     | VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR);
+  
+  m_rtBuilder.buildBlas(allBlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR);
+                                     //| VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR);
 }
 
 void Raytracer::createTopLevelAS(std::vector<ObjInstance>& instances, ImplInst& implicitObj)

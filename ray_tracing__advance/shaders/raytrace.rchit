@@ -52,7 +52,7 @@ layout(location = 3) callableDataEXT rayLight cLight;
 void main()
 {
   // Object data
-  ObjDesc    objResource = objDesc.i[gl_InstanceCustomIndexEXT];
+  /*ObjDesc    objResource = objDesc.i[gl_InstanceCustomIndexEXT];
   MatIndices matIndices  = MatIndices(objResource.materialIndexAddress);
   Materials  materials   = Materials(objResource.materialAddress);
   Indices    indices     = Indices(objResource.indexAddress);
@@ -65,13 +65,20 @@ void main()
   Vertex v0 = vertices.v[ind.x];
   Vertex v1 = vertices.v[ind.y];
   Vertex v2 = vertices.v[ind.z];
-
+  */
   const vec3 barycentrics = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
+
+  
+  prd.hitValue = barycentrics;
+
+  /*
 
   // Computing the normal at hit position
   vec3 normal = v0.nrm * barycentrics.x + v1.nrm * barycentrics.y + v2.nrm * barycentrics.z;
   // Transforming the normal to world space
   normal = normalize(vec3(normal * gl_WorldToObjectEXT));
+
+  float attr = v0.atr * barycentrics.x + v1.atr * barycentrics.y + v2.atr * barycentrics.z;
 
   // Computing the coordinates of the hit position
   vec3 worldPos = v0.pos * barycentrics.x + v1.pos * barycentrics.y + v2.pos * barycentrics.z;
@@ -172,5 +179,8 @@ void main()
     prd.rayDir    = rayDir;
   }
 
-  prd.hitValue = vec3(cLight.outIntensity * attenuation * (diffuse + specular));
+  prd.hitValue = barycentrics;
+
+  //prd.hitValue = vec3(cLight.outIntensity * attenuation * (diffuse + specular));
+  */
 }

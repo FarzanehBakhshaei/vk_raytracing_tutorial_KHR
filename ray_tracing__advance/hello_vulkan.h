@@ -49,6 +49,7 @@ using Allocator = nvvk::ResourceAllocatorVma;
 using Allocator = nvvk::ResourceAllocatorDedicated;
 #endif
 
+#define PT_IDXn(x, y, z) ((x) + (y) * (numCellsX + 1) + (z) * (numCellsY + 1) * (numCellsX + 1))
 
 //--------------------------------------------------------------------------------------------------
 // Simple rasterizer of OBJ objects
@@ -72,6 +73,7 @@ public:
   void onResize(int /*w*/, int /*h*/) override;
   void destroyResources();
   void rasterize(const VkCommandBuffer& cmdBuff);
+  void loadVolumetricData(const char* filePath, nvmath::mat4f transform = nvmath::mat4f(1)); // mat4f(1) is identity
 
   Offscreen& offscreen() { return m_offscreen; }
   Raytracer& raytracer() { return m_raytrace; }

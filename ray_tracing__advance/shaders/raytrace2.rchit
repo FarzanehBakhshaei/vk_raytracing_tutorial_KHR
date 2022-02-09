@@ -84,14 +84,10 @@ void main()
   cLight.inHitPosition = worldPos;
   executeCallableEXT(pcRay.lightType, 3);
 
-  // Material of the object
   ObjDesc           objResource = objDesc.i[gl_InstanceCustomIndexEXT];
-  Materials         materials   = Materials(objResource.materialAddress);
-  WaveFrontMaterial mat         = materials.m[impl.matId];
-
 
   // Diffuse
-  vec3 diffuse = computeDiffuse(mat, cLight.outLightDir, normal);
+  vec3 diffuse = vec3(dot(cLight.outLightDir, normal));
 
   vec3  specular    = vec3(0);
   float attenuation = 1;
@@ -125,21 +121,9 @@ void main()
     else
     {
       // Specular
-      specular = computeSpecular(mat, gl_WorldRayDirectionEXT, cLight.outLightDir, normal);
+      //specular = vec3(0);
     }
   }
-
-  // Reflection
-  if(mat.illum == 3)
-  {
-    vec3 origin = worldPos;
-    vec3 rayDir = reflect(gl_WorldRayDirectionEXT, normal);
-    prd.attenuation *= mat.specular;
-    prd.done      = 0;
-    prd.rayOrigin = origin;
-    prd.rayDir    = rayDir;
-  }
-
 
   prd.hitValue = vec3(cLight.outIntensity * attenuation * (diffuse + specular));
 }
