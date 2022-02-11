@@ -93,6 +93,11 @@ void renderUI(HelloVulkan& helloVk)
     }
   }
 
+  
+  //ISOValue
+  changed |= ImGui::SliderFloat("ISOValue", &helloVk.m_atrInfo.ISOValue, 0.0f, 2.0f);
+
+
   changed |= ImGui::SliderInt("Max Frames", &helloVk.m_maxFrames, 1, 1000);
   if(changed)
     helloVk.resetFrame();
@@ -123,7 +128,7 @@ int main(int argc, char** argv)
 
   // Setup camera
   CameraManip.setWindowSize(SAMPLE_WIDTH, SAMPLE_HEIGHT);
-  CameraManip.setLookat({8.440, 9.041, -8.973}, {-2.462, 3.661, -0.286}, {0.000, 1.000, 0.000});
+  CameraManip.setLookat({164, -347, 91}, {166, 78, 51}, {0.000, 1.000, 0.000});
 
   // Setup Vulkan
   if(!glfwVulkanSupported())
@@ -189,8 +194,8 @@ int main(int argc, char** argv)
   helloVk.initGUI(0);  // Using sub-pass 0
 
   // Creation of the example
-  //helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData1_snapshot.dat", defaultSearchPaths, true).c_str());
-  helloVk.loadVolumetricData(nvh::findFile("media/scenes/kitten_132_115_200_its500.dat", defaultSearchPaths, true).c_str());
+  helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData1_snapshot.dat", defaultSearchPaths, true).c_str());
+  //helloVk.loadVolumetricData(nvh::findFile("media/scenes/kitten_132_115_200_its500.dat", defaultSearchPaths, true).c_str());
 
   //helloVk.loadModel(nvh::findFile("media/scenes/Medieval_building.obj", defaultSearchPaths, true));
   //helloVk.loadModel(nvh::findFile("media/scenes/plane.obj", defaultSearchPaths, true));
@@ -243,6 +248,7 @@ int main(int argc, char** argv)
   helloVk.createGraphicsPipeline();
   helloVk.createUniformBuffer();
   helloVk.createObjDescriptionBuffer();
+  helloVk.createAtrInfoBuffer();
   helloVk.updateDescriptorSet();
 
   // #VKRay

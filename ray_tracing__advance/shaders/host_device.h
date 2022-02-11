@@ -44,7 +44,9 @@ START_BINDING(SceneBindings)
   eGlobals   = 0,  // Global uniform containing camera matrices
   eObjDescs  = 1,  // Access to the object descriptions
   eTextures  = 2,  // Access to textures
-  eImplicits = 3   // Implicit objects
+  eImplicits = 3,   // Implicit objects
+  eAtrTexture = 4,
+  eAtrInfo = 5
 END_BINDING();
 
 START_BINDING(RtxBindings)
@@ -69,6 +71,14 @@ struct GlobalUniforms
   mat4 viewProj;     // Camera view * projection
   mat4 viewInverse;  // Camera inverse view matrix
   mat4 projInverse;  // Camera inverse projection matrix
+};
+
+struct AtrInfo
+{
+  vec4 minPoint;
+  vec4 dimension;
+  float ISOValue;
+  int   padding[3];
 };
 
 // Push constant structure for the raster

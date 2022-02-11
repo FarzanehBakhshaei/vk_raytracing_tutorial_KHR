@@ -41,6 +41,8 @@ layout(buffer_reference, scalar) buffer MatIndices {int i[]; }; // Material ID f
 layout(set = 0, binding = eTlas) uniform accelerationStructureEXT topLevelAS;
 layout(set = 1, binding = eObjDescs, scalar) buffer ObjDesc_ { ObjDesc i[]; } objDesc;
 layout(set = 1, binding = eTextures) uniform sampler2D textureSamplers[];
+layout(set = 1, binding = eAtrTexture) uniform sampler3D atrTextureSampler;
+layout(set = 1, binding = eAtrInfo) uniform _AtrInfoUniforms { AtrInfo ai; };
 
 layout(push_constant) uniform _PushConstantRay { PushConstantRay pcRay; };
 // clang-format on
@@ -52,12 +54,14 @@ layout(location = 3) callableDataEXT rayLight cLight;
 void main()
 {
   // Object data
-  /*ObjDesc    objResource = objDesc.i[gl_InstanceCustomIndexEXT];
+  /*
   MatIndices matIndices  = MatIndices(objResource.materialIndexAddress);
   Materials  materials   = Materials(objResource.materialAddress);
-  Indices    indices     = Indices(objResource.indexAddress);
-  Vertices   vertices    = Vertices(objResource.vertexAddress);
 
+  */
+  ObjDesc    objResource = objDesc.i[gl_InstanceCustomIndexEXT];
+  Vertices   vertices    = Vertices(objResource.vertexAddress);
+  Indices    indices     = Indices(objResource.indexAddress);
   // Indices of the triangle
   ivec3 ind = indices.i[gl_PrimitiveID];
 
@@ -65,11 +69,27 @@ void main()
   Vertex v0 = vertices.v[ind.x];
   Vertex v1 = vertices.v[ind.y];
   Vertex v2 = vertices.v[ind.z];
-  */
-  const vec3 barycentrics = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
-
   
-  prd.hitValue = barycentrics;
+  const vec3 barycentrics = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
+  vec3 pos = v0.pos * barycentrics.x + v1.pos * barycentrics.y + v2.pos * barycentrics.z;
+  
+  vec3 normalizedCoord = (pos - ai.minPoint.xyz) / ai.dimension.xyz;
+
+  float FxPlusDeltaX    = texture(atrTextureSampler, clamp (normalizedCoord + vec3(1.0f/ai.dimension.x, 0.0f, 0.0f), 0.0f, 1.0f)).r;
+  float FxMinusDeltaX   = texture(atrTextureSampler, clamp (normalizedCoord - vec3(1.0f/ai.dimension.x, 0.0f, 0.0f), 0.0f, 1.0f)).r;
+  float FxPlusDeltaY    = texture(atrTextureSampler, clamp (normalizedCoord + vec3(0.0f, 1.0f/ai.dimension.y, 0.0f), 0.0f, 1.0f)).r;
+  float FxMinusDeltaY   = texture(atrTextureSampler, clamp (normalizedCoord - vec3(0.0f, 1.0f/ai.dimension.y, 0.0f), 0.0f, 1.0f)).r;
+  float FxPlusDeltaZ    = texture(atrTextureSampler, clamp (normalizedCoord + vec3(0.0f, 0.0f, 1.0f/ai.dimension.z), 0.0f, 1.0f)).r;
+  float FxMinusDeltaZ   = texture(atrTextureSampler, clamp (normalizedCoord - vec3(0.0f, 0.0f, 1.0f/ai.dimension.z), 0.0f, 1.0f)).r;
+  
+  vec3 n = vec3 (FxPlusDeltaX - FxMinusDeltaX, FxPlusDeltaY - FxMinusDeltaY, FxPlusDeltaZ - FxMinusDeltaZ) * ai.dimension.xyz * 0.5f;
+  vec3 normal;
+  if(dot(n, n) < 0.001f)
+   normal = vec3(0.0f);
+  else
+   normal = normalize(n);
+
+  prd.hitValue = (normal + 1) / 2.0f;
 
   /*
 

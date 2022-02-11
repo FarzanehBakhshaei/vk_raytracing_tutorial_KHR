@@ -30,6 +30,7 @@ struct ObjModel
   nvvk::Buffer indexBuffer;     // Device buffer of the indices forming triangles
   nvvk::Buffer matColorBuffer;  // Device buffer of array of 'Wavefront material'
   nvvk::Buffer matIndexBuffer;  // Device buffer of array of 'Wavefront material'
+  nvvk::Texture texture;
 };
 
 struct ObjInstance

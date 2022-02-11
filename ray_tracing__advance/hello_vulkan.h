@@ -68,6 +68,7 @@ public:
   void updateDescriptorSet();
   void createUniformBuffer();
   void createObjDescriptionBuffer();
+  void createAtrInfoBuffer();
   void createTextureImages(const VkCommandBuffer& cmdBuf, const std::vector<std::string>& textures);
   void updateUniformBuffer(const VkCommandBuffer& cmdBuf);
   void onResize(int /*w*/, int /*h*/) override;
@@ -95,7 +96,7 @@ public:
   std::vector<ObjModel>    m_objModel;   // Model on host
   std::vector<ObjDesc>     m_objDesc;    // Model description for device access
   std::vector<ObjInstance> m_instances;  // Scene model instances
-
+  AtrInfo     m_atrInfo;
 
   // Graphic pipeline
   VkPipelineLayout            m_pipelineLayout;
@@ -111,6 +112,7 @@ public:
 
   nvvk::Buffer m_bGlobals;  // Device-Host of the camera matrices
   nvvk::Buffer m_bObjDesc;  // Device buffer of the OBJ descriptions
+  nvvk::Buffer m_bAtrInfo;   // Device buffer of the attribute info
 
   std::vector<nvvk::Texture> m_textures;  // vector of all textures of the scene
 

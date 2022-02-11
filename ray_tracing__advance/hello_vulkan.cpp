@@ -92,6 +92,8 @@ void HelloVulkan::updateUniformBuffer(const VkCommandBuffer& cmdBuf)
   // Schedule the host-to-device upload. (hostUBO is copied into the cmd
   // buffer so it is okay to deallocate when the function returns).
   vkCmdUpdateBuffer(cmdBuf, m_bGlobals.buffer, 0, sizeof(GlobalUniforms), &hostUBO);
+  
+  vkCmdUpdateBuffer(cmdBuf, m_bAtrInfo.buffer, 0, sizeof(AtrInfo), &m_atrInfo);
 
   // Making sure the updated UBO will be visible.
   VkBufferMemoryBarrier afterBarrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
@@ -114,6 +116,7 @@ void HelloVulkan::createDescriptorSetLayout()
   // Camera matrices
   m_descSetLayoutBind.addBinding(SceneBindings::eGlobals, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
                                  VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+  
   // Obj descriptions
   m_descSetLayoutBind.addBinding(SceneBindings::eObjDescs, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1,
                                  VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
@@ -121,6 +124,14 @@ void HelloVulkan::createDescriptorSetLayout()
   // Textures
   m_descSetLayoutBind.addBinding(SceneBindings::eTextures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, nbTxt,
                                  VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+
+  // Attributes
+  m_descSetLayoutBind.addBinding(SceneBindings::eAtrTexture, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
+                                 VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+
+  // AttributesDimension
+  m_descSetLayoutBind.addBinding(SceneBindings::eAtrInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
+                                 VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
 
   // Storing implicit obj (binding = 3)
   m_descSetLayoutBind.addBinding(eImplicits, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1,
@@ -154,6 +165,14 @@ void HelloVulkan::updateDescriptorSet()
     diit.emplace_back(texture.descriptor);
   }
   writes.emplace_back(m_descSetLayoutBind.makeWriteArray(m_descSet, SceneBindings::eTextures, diit.data()));
+
+  // Attribues
+  VkDescriptorImageInfo dii{m_objModel[0].texture.descriptor};
+  writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, SceneBindings::eAtrTexture, &dii));
+
+  // Attributes Info
+  VkDescriptorBufferInfo adUni{m_bAtrInfo.buffer, 0, VK_WHOLE_SIZE};
+  writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, SceneBindings::eAtrInfo, &adUni));
 
   VkDescriptorBufferInfo dbiImplDesc{m_implObjects.implBuf.buffer, 0, VK_WHOLE_SIZE};
   writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, 3, &dbiImplDesc));
@@ -269,6 +288,7 @@ void HelloVulkan::loadModel(const std::string& filename, nvmath::mat4f transform
 void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transform)
 {
   //return;
+  //"C:/Users/morte/Downloads/TopOpti Material Field Volume/testData.dat"x
   SimVisDataPtr simVisPtr = SimVisData::loadFromFile(filePath);
   std::vector<MaterialObj> materials(128, MaterialObj());
   std::vector<std::string> textures;
@@ -346,6 +366,22 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
   // Creates all textures found and find the offset for this model
   auto txtOffset = 0;
   createTextureImages(cmdBuf, textures);
+  
+  VkFormat format               = VK_FORMAT_R32_SFLOAT;
+  VkExtent3D imgSize            = VkExtent3D{(uint32_t)numCellsX, (uint32_t)numCellsY, (uint32_t)numCellsZ};
+  VkDeviceSize bufferSize       = static_cast<uint64_t>(numCellsX * numCellsY * numCellsZ * sizeof(float));
+  auto imageCreateInfo          = nvvk::makeImage3DCreateInfo(imgSize, format);
+  VkSamplerCreateInfo samplerCreateInfo{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+  samplerCreateInfo.minFilter   = VK_FILTER_LINEAR;
+  samplerCreateInfo.magFilter   = VK_FILTER_LINEAR;
+  samplerCreateInfo.mipmapMode  = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+  samplerCreateInfo.maxLod      = FLT_MAX;
+
+  nvvk::Image image             = m_alloc.createImage(cmdBuf, bufferSize, simVisPtr->attributesList[0].data(), imageCreateInfo);
+  VkImageViewCreateInfo ivInfo  = nvvk::makeImageViewCreateInfo(image.image, imageCreateInfo);
+  model.texture = m_alloc.createTexture(image, ivInfo, samplerCreateInfo);
+  
+  
   cmdBufGet.submitAndWait(cmdBuf);
   m_alloc.finalizeAndReleaseStaging();
 
@@ -354,6 +390,7 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
   m_debug.setObjectName(model.indexBuffer.buffer, (std::string("index_" + objNb)));
   m_debug.setObjectName(model.matColorBuffer.buffer, (std::string("mat_" + objNb)));
   m_debug.setObjectName(model.matIndexBuffer.buffer, (std::string("matIdx_" + objNb)));
+  m_debug.setObjectName(model.texture.image, (std::string("texture_" + objNb)));
 
   // Keeping transformation matrix of the instance
   ObjInstance instance;
@@ -372,6 +409,10 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
   // Keeping the obj host model and device description
   m_objModel.emplace_back(model);
   m_objDesc.emplace_back(desc);
+
+  m_atrInfo.dimension = vec4(numCellsX, numCellsY, numCellsZ, 1);
+  m_atrInfo.minPoint  = vec4(0, 0, 0, 1);
+  m_atrInfo.ISOValue  = 0.9f;
 }
 
 
@@ -401,6 +442,17 @@ void HelloVulkan::createObjDescriptionBuffer()
   cmdGen.submitAndWait(cmdBuf);
   m_alloc.finalizeAndReleaseStaging();
   m_debug.setObjectName(m_bObjDesc.buffer, "ObjDescs");
+}
+
+//--------------------------------------------------------------------------------------------------
+// Creating the m_bAtrDim buffer holding the attributes dimension
+// - 
+//
+void HelloVulkan::createAtrInfoBuffer()
+{
+  m_bAtrInfo = m_alloc.createBuffer(sizeof(AtrInfo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+  m_debug.setObjectName(m_bAtrInfo.buffer, "AtrInfo");
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -488,6 +540,7 @@ void HelloVulkan::destroyResources()
 
   m_alloc.destroy(m_bGlobals);
   m_alloc.destroy(m_bObjDesc);
+  m_alloc.destroy(m_bAtrInfo);
   m_alloc.destroy(m_implObjects.implBuf);
   m_alloc.destroy(m_implObjects.implMatBuf);
 
@@ -497,6 +550,7 @@ void HelloVulkan::destroyResources()
     m_alloc.destroy(m.indexBuffer);
     m_alloc.destroy(m.matColorBuffer);
     m_alloc.destroy(m.matIndexBuffer);
+    m_alloc.destroy(m.texture);
   }
 
   for(auto& t : m_textures)
