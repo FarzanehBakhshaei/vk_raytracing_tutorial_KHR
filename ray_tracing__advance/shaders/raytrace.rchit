@@ -75,7 +75,7 @@ void main()
   
   //********************refine hit with ray marching***********************
     vec3 debug_color = vec3(0);
-#if 0
+#if 1
 
   vec3 rayDirInv = normalize(-gl_WorldRayDirectionEXT);
   float stepSize =  max(1.0f/ai.dimension.x, max(1.0f/ai.dimension.y, 1.0f/ai.dimension.z));
