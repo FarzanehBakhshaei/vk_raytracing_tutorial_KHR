@@ -73,40 +73,69 @@ void main()
   const vec3 barycentrics = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
   vec3 pos = v0.pos * barycentrics.x + v1.pos * barycentrics.y + v2.pos * barycentrics.z;
   
+  //********************refine hit with ray marching***********************
+    vec3 debug_color = vec3(0);
+#if 0
+
+  vec3 rayDirInv = normalize(-gl_WorldRayDirectionEXT);
+  float stepSize =  max(1.0f/ai.dimension.x, max(1.0f/ai.dimension.y, 1.0f/ai.dimension.z));
+  vec3 lastPos = pos + rayDirInv * stepSize;
+
+  for (int i=0; i<10; i++) {
+    vec3 midPos = (pos + lastPos)/2.f;
+    vec3 normalizedCoord = (midPos - ai.minPoint.xyz) / ai.dimension.xyz;
+    float attri = texture(atrTextureSampler, normalizedCoord).r;
+    if (attri >= ai.ISOValue) {
+      pos = midPos;
+      debug_color += vec3(0, 0.1, 0);
+      
+    } else {
+      lastPos = midPos;
+      debug_color += vec3(0.1, 0, 0);
+    }
+  }
+
+#else
+    debug_color = vec3(1);
+#endif
+  //*****************************************************
+
   vec3 normalizedCoord = (pos - ai.minPoint.xyz) / ai.dimension.xyz;
 
-  float FxPlusDeltaX    = texture(atrTextureSampler, clamp (normalizedCoord + vec3(1.0f/ai.dimension.x, 0.0f, 0.0f), 0.0f, 1.0f)).r;
-  float FxMinusDeltaX   = texture(atrTextureSampler, clamp (normalizedCoord - vec3(1.0f/ai.dimension.x, 0.0f, 0.0f), 0.0f, 1.0f)).r;
-  float FxPlusDeltaY    = texture(atrTextureSampler, clamp (normalizedCoord + vec3(0.0f, 1.0f/ai.dimension.y, 0.0f), 0.0f, 1.0f)).r;
-  float FxMinusDeltaY   = texture(atrTextureSampler, clamp (normalizedCoord - vec3(0.0f, 1.0f/ai.dimension.y, 0.0f), 0.0f, 1.0f)).r;
-  float FxPlusDeltaZ    = texture(atrTextureSampler, clamp (normalizedCoord + vec3(0.0f, 0.0f, 1.0f/ai.dimension.z), 0.0f, 1.0f)).r;
-  float FxMinusDeltaZ   = texture(atrTextureSampler, clamp (normalizedCoord - vec3(0.0f, 0.0f, 1.0f/ai.dimension.z), 0.0f, 1.0f)).r;
+  float f_XPlusDeltaX    = texture(atrTextureSampler, clamp (normalizedCoord + vec3(1.0f/ai.dimension.x, 0.0f, 0.0f), 0.0f, 1.0f)).r;
+  float f_XMinusDeltaX   = texture(atrTextureSampler, clamp (normalizedCoord - vec3(1.0f/ai.dimension.x, 0.0f, 0.0f), 0.0f, 1.0f)).r;
+  float f_YPlusDeltaY    = texture(atrTextureSampler, clamp (normalizedCoord + vec3(0.0f, 1.0f/ai.dimension.y, 0.0f), 0.0f, 1.0f)).r;
+  float f_YMinusDeltaY   = texture(atrTextureSampler, clamp (normalizedCoord - vec3(0.0f, 1.0f/ai.dimension.y, 0.0f), 0.0f, 1.0f)).r;
+  float f_ZPlusDeltaZ    = texture(atrTextureSampler, clamp (normalizedCoord + vec3(0.0f, 0.0f, 1.0f/ai.dimension.z), 0.0f, 1.0f)).r;
+  float f_ZMinusDeltaZ   = texture(atrTextureSampler, clamp (normalizedCoord - vec3(0.0f, 0.0f, 1.0f/ai.dimension.z), 0.0f, 1.0f)).r;
   
-  vec3 n = vec3 (FxPlusDeltaX - FxMinusDeltaX, FxPlusDeltaY - FxMinusDeltaY, FxPlusDeltaZ - FxMinusDeltaZ) * ai.dimension.xyz * 0.5f;
+  vec3 n = vec3 (f_XPlusDeltaX - f_XMinusDeltaX, f_YPlusDeltaY - f_YMinusDeltaY, f_ZPlusDeltaZ - f_ZMinusDeltaZ) * ai.dimension.xyz * 0.5f;
   vec3 normal;
-  if(dot(n, n) < 0.001f)
+  if(dot(n, n) < 0.001f)    // |n^2| < 0.001f
    normal = vec3(0.0f);
   else
    normal = normalize(n);
 
-  prd.hitValue = (normal + 1) / 2.0f;
+  //prd.hitValue = (normal + 1) / 2.0f;
+
+
 
   /*
-
   // Computing the normal at hit position
   vec3 normal = v0.nrm * barycentrics.x + v1.nrm * barycentrics.y + v2.nrm * barycentrics.z;
   // Transforming the normal to world space
   normal = normalize(vec3(normal * gl_WorldToObjectEXT));
-
+  
   float attr = v0.atr * barycentrics.x + v1.atr * barycentrics.y + v2.atr * barycentrics.z;
+  */
 
   // Computing the coordinates of the hit position
-  vec3 worldPos = v0.pos * barycentrics.x + v1.pos * barycentrics.y + v2.pos * barycentrics.z;
+//  vec3 worldPos = v0.pos * barycentrics.x + v1.pos * barycentrics.y + v2.pos * barycentrics.z;
   // Transforming the position to world space
-  worldPos = vec3(gl_ObjectToWorldEXT * vec4(worldPos, 1.0));
+  //worldPos = vec3(gl_ObjectToWorldEXT * vec4(worldPos, 1.0));
 
-  cLight.inHitPosition = worldPos;
-//#define DONT_USE_CALLABLE
+  cLight.inHitPosition = pos;
+#define DONT_USE_CALLABLE
 #if defined(DONT_USE_CALLABLE)
   // Point light
   if(pcRay.lightType == 0)
@@ -117,7 +146,7 @@ void main()
     cLight.outLightDir      = normalize(lDir);
     cLight.outLightDistance = lightDistance;
   }
-  else if(pcRay.lightType == 1)
+  else if(pcRay.lightType == 1) // spot light
   {
     vec3 lDir               = pcRay.lightPosition - cLight.inHitPosition;
     cLight.outLightDistance = length(lDir);
@@ -139,18 +168,18 @@ void main()
 #endif
 
   // Material of the object
-  int               matIdx = matIndices.i[gl_PrimitiveID];
-  WaveFrontMaterial mat    = materials.m[matIdx];
+  //int               matIdx = matIndices.i[gl_PrimitiveID];
+  //WaveFrontMaterial mat    = materials.m[matIdx];
 
 
   // Diffuse
-  vec3 diffuse = computeDiffuse(mat, cLight.outLightDir, normal);
-  if(mat.textureId >= 0)
-  {
-    uint txtId    = mat.textureId + objDesc.i[gl_InstanceCustomIndexEXT].txtOffset;
-    vec2 texCoord = v0.texCoord * barycentrics.x + v1.texCoord * barycentrics.y + v2.texCoord * barycentrics.z;
-    diffuse *= texture(textureSamplers[nonuniformEXT(txtId)], texCoord).xyz;
-  }
+  vec3 diffuse = computeDiffuse(cLight.outLightDir, normal);
+//  if(mat.textureId >= 0)
+//  {
+//    uint txtId    = mat.textureId + objDesc.i[gl_InstanceCustomIndexEXT].txtOffset;
+//    vec2 texCoord = v0.texCoord * barycentrics.x + v1.texCoord * barycentrics.y + v2.texCoord * barycentrics.z;
+//    diffuse *= texture(textureSamplers[nonuniformEXT(txtId)], texCoord).xyz;
+//  }
 
   vec3  specular    = vec3(0);
   float attenuation = 1;
@@ -184,12 +213,12 @@ void main()
     else
     {
       // Specular
-      specular = computeSpecular(mat, gl_WorldRayDirectionEXT, cLight.outLightDir, normal);
+      specular = computeSpecular(gl_WorldRayDirectionEXT, cLight.outLightDir, normal);
     }
   }
 
   // Reflection
-  if(mat.illum == 3)
+  /*if(mat.illum == 3)
   {
     vec3 origin = worldPos;
     vec3 rayDir = reflect(gl_WorldRayDirectionEXT, normal);
@@ -197,10 +226,10 @@ void main()
     prd.done      = 0;
     prd.rayOrigin = origin;
     prd.rayDir    = rayDir;
-  }
+  }*/
 
-  prd.hitValue = barycentrics;
+  //prd.hitValue = barycentrics;
 
-  //prd.hitValue = vec3(cLight.outIntensity * attenuation * (diffuse + specular));
-  */
+
+  prd.hitValue = debug_color * vec3(cLight.outIntensity * attenuation * (diffuse + specular));
 }

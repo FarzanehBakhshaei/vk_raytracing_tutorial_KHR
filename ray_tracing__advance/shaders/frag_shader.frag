@@ -95,7 +95,7 @@ void main()
   }
 
   // Diffuse
-  vec3 diffuse = computeDiffuse(mat, LightDir, N);
+  vec3 diffuse = computeDiffuse(LightDir, N);
 
   if(mat.textureId >= 0)
   {
@@ -107,7 +107,7 @@ void main()
 
 
   // Specular
-  vec3 specular = computeSpecular(mat, i_viewDir, LightDir, N);
+  vec3 specular = computeSpecular(i_viewDir, LightDir, N);
 
   // Result
   o_color = vec4(lightIntensity * (diffuse + specular), 1);

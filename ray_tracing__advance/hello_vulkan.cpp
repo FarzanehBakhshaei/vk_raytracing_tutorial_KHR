@@ -412,7 +412,7 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
 
   m_atrInfo.dimension = vec4(numCellsX, numCellsY, numCellsZ, 1);
   m_atrInfo.minPoint  = vec4(0, 0, 0, 1);
-  m_atrInfo.ISOValue  = 0.9f;
+  m_atrInfo.ISOValue  = 0.077f;
 }
 
 
