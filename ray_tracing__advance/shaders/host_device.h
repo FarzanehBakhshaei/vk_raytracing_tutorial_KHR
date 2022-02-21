@@ -46,7 +46,9 @@ START_BINDING(SceneBindings)
   eTextures  = 2,  // Access to textures
   eImplicits = 3,   // Implicit objects
   eAtrTexture = 4,
-  eAtrInfo = 5
+  eAtrInfo = 5,
+  eAtrSamplerLinear = 6,
+  eAtrSamplerMinMax = 7  
 END_BINDING();
 
 START_BINDING(RtxBindings)

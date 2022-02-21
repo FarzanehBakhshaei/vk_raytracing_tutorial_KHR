@@ -138,4 +138,7 @@ public:
   void addImplCube(nvmath::vec3f minumum, nvmath::vec3f maximum, int matId);
   void addImplMaterial(const MaterialObj& mat);
   void createImplictBuffers();
+
+  VkSampler m_linearSampler = VK_NULL_HANDLE;
+  VkSampler m_MinMaxSampler = VK_NULL_HANDLE;
 };

@@ -40,9 +40,11 @@ layout(buffer_reference, scalar) buffer Materials {WaveFrontMaterial m[]; }; // 
 layout(buffer_reference, scalar) buffer MatIndices {int i[]; }; // Material ID for each triangle
 layout(set = 0, binding = eTlas) uniform accelerationStructureEXT topLevelAS;
 layout(set = 1, binding = eObjDescs, scalar) buffer ObjDesc_ { ObjDesc i[]; } objDesc;
-layout(set = 1, binding = eTextures) uniform sampler2D textureSamplers[];
-layout(set = 1, binding = eAtrTexture) uniform sampler3D atrTextureSampler;
+//layout(set = 1, binding = eTextures) uniform sampler2D textureSamplers[];
 layout(set = 1, binding = eAtrInfo) uniform _AtrInfoUniforms { AtrInfo ai; };
+
+layout(set = 1, binding = eAtrSamplerLinear) uniform sampler AtrSampLin;
+layout(set = 1, binding = eAtrTexture) uniform texture3D atrTexture;
 
 layout(push_constant) uniform _PushConstantRay { PushConstantRay pcRay; };
 // clang-format on
@@ -84,7 +86,7 @@ void main()
   for (int i=0; i<10; i++) {
     vec3 midPos = (pos + lastPos)/2.f;
     vec3 normalizedCoord = (midPos - ai.minPoint.xyz) / ai.dimension.xyz;
-    float attri = texture(atrTextureSampler, normalizedCoord).r;
+    float attri = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).r;
     if (attri >= ai.ISOValue) {
       pos = midPos;
       debug_color += vec3(0, 0.1, 0);
@@ -102,12 +104,12 @@ void main()
 
   vec3 normalizedCoord = (pos - ai.minPoint.xyz) / ai.dimension.xyz;
 
-  float f_XPlusDeltaX    = texture(atrTextureSampler, clamp (normalizedCoord + vec3(1.0f/ai.dimension.x, 0.0f, 0.0f), 0.0f, 1.0f)).r;
-  float f_XMinusDeltaX   = texture(atrTextureSampler, clamp (normalizedCoord - vec3(1.0f/ai.dimension.x, 0.0f, 0.0f), 0.0f, 1.0f)).r;
-  float f_YPlusDeltaY    = texture(atrTextureSampler, clamp (normalizedCoord + vec3(0.0f, 1.0f/ai.dimension.y, 0.0f), 0.0f, 1.0f)).r;
-  float f_YMinusDeltaY   = texture(atrTextureSampler, clamp (normalizedCoord - vec3(0.0f, 1.0f/ai.dimension.y, 0.0f), 0.0f, 1.0f)).r;
-  float f_ZPlusDeltaZ    = texture(atrTextureSampler, clamp (normalizedCoord + vec3(0.0f, 0.0f, 1.0f/ai.dimension.z), 0.0f, 1.0f)).r;
-  float f_ZMinusDeltaZ   = texture(atrTextureSampler, clamp (normalizedCoord - vec3(0.0f, 0.0f, 1.0f/ai.dimension.z), 0.0f, 1.0f)).r;
+  float f_XPlusDeltaX    = texture(sampler3D(atrTexture, AtrSampLin), clamp (normalizedCoord + vec3(1.0f/ai.dimension.x, 0.0f, 0.0f), 0.0f, 1.0f)).r;
+  float f_XMinusDeltaX   = texture(sampler3D(atrTexture, AtrSampLin), clamp (normalizedCoord - vec3(1.0f/ai.dimension.x, 0.0f, 0.0f), 0.0f, 1.0f)).r;
+  float f_YPlusDeltaY    = texture(sampler3D(atrTexture, AtrSampLin), clamp (normalizedCoord + vec3(0.0f, 1.0f/ai.dimension.y, 0.0f), 0.0f, 1.0f)).r;
+  float f_YMinusDeltaY   = texture(sampler3D(atrTexture, AtrSampLin), clamp (normalizedCoord - vec3(0.0f, 1.0f/ai.dimension.y, 0.0f), 0.0f, 1.0f)).r;
+  float f_ZPlusDeltaZ    = texture(sampler3D(atrTexture, AtrSampLin), clamp (normalizedCoord + vec3(0.0f, 0.0f, 1.0f/ai.dimension.z), 0.0f, 1.0f)).r;
+  float f_ZMinusDeltaZ   = texture(sampler3D(atrTexture, AtrSampLin), clamp (normalizedCoord - vec3(0.0f, 0.0f, 1.0f/ai.dimension.z), 0.0f, 1.0f)).r;
   
   vec3 n = vec3 (f_XPlusDeltaX - f_XMinusDeltaX, f_YPlusDeltaY - f_YMinusDeltaY, f_ZPlusDeltaZ - f_ZMinusDeltaZ) * ai.dimension.xyz * 0.5f;
   vec3 normal;

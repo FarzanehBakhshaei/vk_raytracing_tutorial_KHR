@@ -126,8 +126,16 @@ void HelloVulkan::createDescriptorSetLayout()
                                  VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
 
   // Attributes
-  m_descSetLayoutBind.addBinding(SceneBindings::eAtrTexture, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
-                                 VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+  m_descSetLayoutBind.addBinding(SceneBindings::eAtrTexture, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1,
+                                 VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+  
+  // AttributeSampler1
+  m_descSetLayoutBind.addBinding(SceneBindings::eAtrSamplerLinear, VK_DESCRIPTOR_TYPE_SAMPLER, 1,
+                                 VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+  
+  // AttributeSampler2
+  //m_descSetLayoutBind.addBinding(SceneBindings::eAtrSamplerMinMax, VK_DESCRIPTOR_TYPE_SAMPLER, 1,
+     //                            VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
 
   // AttributesDimension
   m_descSetLayoutBind.addBinding(SceneBindings::eAtrInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
@@ -168,7 +176,13 @@ void HelloVulkan::updateDescriptorSet()
 
   // Attribues
   VkDescriptorImageInfo dii{m_objModel[0].texture.descriptor};
+  dii.sampler = VK_NULL_HANDLE;
   writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, SceneBindings::eAtrTexture, &dii));
+
+  // AtrSampLinear
+  VkDescriptorImageInfo diiS{m_linearSampler};
+  writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, SceneBindings::eAtrSamplerLinear, &diiS));
+
 
   // Attributes Info
   VkDescriptorBufferInfo adUni{m_bAtrInfo.buffer, 0, VK_WHOLE_SIZE};
@@ -377,9 +391,15 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
   samplerCreateInfo.mipmapMode  = VK_SAMPLER_MIPMAP_MODE_LINEAR;
   samplerCreateInfo.maxLod      = FLT_MAX;
 
+  // create sampler
+  if(vkCreateSampler(m_device, &samplerCreateInfo, nullptr, &m_linearSampler) != VK_SUCCESS)
+  {
+    std::runtime_error("cannot create linear sampler.\n");
+  }
+
   nvvk::Image image             = m_alloc.createImage(cmdBuf, bufferSize, simVisPtr->attributesList[0].data(), imageCreateInfo);
   VkImageViewCreateInfo ivInfo  = nvvk::makeImageViewCreateInfo(image.image, imageCreateInfo);
-  model.texture = m_alloc.createTexture(image, ivInfo, samplerCreateInfo);
+  model.texture = m_alloc.createTexture(image, ivInfo);
   
   
   cmdBufGet.submitAndWait(cmdBuf);
