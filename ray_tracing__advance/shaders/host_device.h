@@ -80,7 +80,8 @@ struct AtrInfo
   vec4 minPoint;
   vec4 dimension;
   float ISOValue;
-  int   padding[3];
+  int   refineAnyHit;
+  int   padding[2];
 };
 
 // Push constant structure for the raster

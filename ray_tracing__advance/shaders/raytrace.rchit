@@ -46,6 +46,7 @@ layout(set = 1, binding = eAtrInfo) uniform _AtrInfoUniforms { AtrInfo ai; };
 layout(set = 1, binding = eAtrSamplerLinear) uniform sampler AtrSampLin;
 layout(set = 1, binding = eAtrTexture) uniform texture3D atrTexture;
 
+
 layout(push_constant) uniform _PushConstantRay { PushConstantRay pcRay; };
 // clang-format on
 
@@ -76,29 +77,30 @@ void main()
   vec3 pos = v0.pos * barycentrics.x + v1.pos * barycentrics.y + v2.pos * barycentrics.z;
   
   //********************refine hit with ray marching***********************
-    vec3 debug_color = vec3(0);
-#if 1
-
-  vec3 rayDirInv = normalize(-gl_WorldRayDirectionEXT);
-  float stepSize =  max(1.0f/ai.dimension.x, max(1.0f/ai.dimension.y, 1.0f/ai.dimension.z));
-  vec3 lastPos = pos + rayDirInv * stepSize;
-
-  for (int i=0; i<10; i++) {
-    vec3 midPos = (pos + lastPos)/2.f;
-    vec3 normalizedCoord = (midPos - ai.minPoint.xyz) / ai.dimension.xyz;
-    float attri = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).r;
-    if (attri >= ai.ISOValue) {
-      pos = midPos;
-      debug_color += vec3(0, 0.1, 0);
-      
-    } else {
-      lastPos = midPos;
-      debug_color += vec3(0.1, 0, 0);
+    vec3 debug_color = vec3(0, 1, 0);
+#if 0
+    if(ai.refineAnyHit != 0) {
+      debug_color = vec3(0);
+      vec3 rayDirInv = normalize(-gl_WorldRayDirectionEXT);
+      float stepSize =  2.0f;//min(1.0f/ai.dimension.x, min(1.0f/ai.dimension.y, 1.0f/ai.dimension.z));
+      vec3 lastPos = pos + rayDirInv * stepSize;
+    
+      for (int i=0; i<10; i++) {
+        vec3 midPos = (pos + lastPos)/2.f;
+        vec3 normalizedCoord = (midPos - ai.minPoint.xyz) / ai.dimension.xyz;
+        float attri = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).r;
+        if (attri >= ai.ISOValue) {
+          pos = midPos;
+          debug_color += vec3(0, 0.1, 0);
+          
+        } else {
+          lastPos = midPos;
+          debug_color += vec3(0, 0.1, 0);
+        }
+      }
     }
-  }
-
 #else
-    debug_color = vec3(1);
+    debug_color = vec3(0, 1, 0);
 #endif
   //*****************************************************
 
@@ -187,7 +189,7 @@ void main()
   float attenuation = 1;
 
   // Tracing shadow ray only if the light is visible from the surface
-  if(dot(normal, cLight.outLightDir) > 0)
+  if(false && dot(normal, cLight.outLightDir) > 0)
   {
     float tMin   = 0.001;
     float tMax   = cLight.outLightDistance;

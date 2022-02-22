@@ -14,6 +14,8 @@ public:
 
 	static SimVisDataPtr loadFromFile(const char* filepath);
 
+    static SimVisDataPtr loadSphere(int dim);
+
     std::vector<int> cellIndices;
 
     std::vector<nvmath::vec3f> vertices;

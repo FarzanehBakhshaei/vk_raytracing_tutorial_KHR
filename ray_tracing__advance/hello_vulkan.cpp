@@ -129,13 +129,13 @@ void HelloVulkan::createDescriptorSetLayout()
   m_descSetLayoutBind.addBinding(SceneBindings::eAtrTexture, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1,
                                  VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
   
-  // AttributeSampler1
+  // AttributeSamplerLinear
   m_descSetLayoutBind.addBinding(SceneBindings::eAtrSamplerLinear, VK_DESCRIPTOR_TYPE_SAMPLER, 1,
                                  VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
   
-  // AttributeSampler2
-  //m_descSetLayoutBind.addBinding(SceneBindings::eAtrSamplerMinMax, VK_DESCRIPTOR_TYPE_SAMPLER, 1,
-     //                            VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+  // AttributeSamplerMinMax
+  m_descSetLayoutBind.addBinding(SceneBindings::eAtrSamplerMinMax, VK_DESCRIPTOR_TYPE_SAMPLER, 1,
+                                 VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
 
   // AttributesDimension
   m_descSetLayoutBind.addBinding(SceneBindings::eAtrInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
@@ -182,6 +182,12 @@ void HelloVulkan::updateDescriptorSet()
   // AtrSampLinear
   VkDescriptorImageInfo diiS{m_linearSampler};
   writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, SceneBindings::eAtrSamplerLinear, &diiS));
+
+
+  // AtrSampMinMax
+  VkDescriptorImageInfo diiSMM{m_MinMaxSampler};
+  writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, SceneBindings::eAtrSamplerMinMax, &diiSMM));
+
 
 
   // Attributes Info
@@ -303,8 +309,9 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
 {
   //return;
   //"C:/Users/morte/Downloads/TopOpti Material Field Volume/testData.dat"x
-  SimVisDataPtr simVisPtr = SimVisData::loadFromFile(filePath);
-  std::vector<MaterialObj> materials(128, MaterialObj());
+  //SimVisDataPtr simVisPtr = SimVisData::loadFromFile(filePath);
+  SimVisDataPtr simVisPtr = SimVisData::loadSphere(32);
+  std::vector<MaterialObj> materials(256, MaterialObj());
   std::vector<std::string> textures;
 
   int numCellsX = simVisPtr->numCellsX;
@@ -389,12 +396,31 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
   samplerCreateInfo.minFilter   = VK_FILTER_LINEAR;
   samplerCreateInfo.magFilter   = VK_FILTER_LINEAR;
   samplerCreateInfo.mipmapMode  = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-  samplerCreateInfo.maxLod      = FLT_MAX;
+  samplerCreateInfo.maxLod      = 1;
+  samplerCreateInfo.anisotropyEnable = VK_TRUE;
+  samplerCreateInfo.maxAnisotropy    = 16;
 
-  // create sampler
+  // create linear sampler
   if(vkCreateSampler(m_device, &samplerCreateInfo, nullptr, &m_linearSampler) != VK_SUCCESS)
   {
-    std::runtime_error("cannot create linear sampler.\n");
+    throw std::runtime_error("cannot create linear sampler.\n");
+  }
+
+  // create min_max sampler
+  VkSamplerReductionModeCreateInfo reductionCreateInfo{VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO};
+  reductionCreateInfo.reductionMode = VK_SAMPLER_REDUCTION_MODE_MAX;
+
+  VkSamplerCreateInfo minMaxSampCreateInfo {VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+  minMaxSampCreateInfo.minFilter = VK_FILTER_LINEAR;
+  minMaxSampCreateInfo.magFilter = VK_FILTER_LINEAR;
+  minMaxSampCreateInfo.maxLod    = 1;
+  minMaxSampCreateInfo.pNext     = &reductionCreateInfo;
+  minMaxSampCreateInfo.anisotropyEnable = VK_TRUE;
+  minMaxSampCreateInfo.maxAnisotropy    = 16;
+
+  if(vkCreateSampler(m_device, &minMaxSampCreateInfo, nullptr, &m_MinMaxSampler) != VK_SUCCESS)
+  {
+    throw std::runtime_error("cannot create min_max sampler.\n");
   }
 
   nvvk::Image image             = m_alloc.createImage(cmdBuf, bufferSize, simVisPtr->attributesList[0].data(), imageCreateInfo);

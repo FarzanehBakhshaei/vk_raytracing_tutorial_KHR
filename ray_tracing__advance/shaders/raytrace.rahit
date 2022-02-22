@@ -43,6 +43,9 @@ layout(set = 1, binding = eAtrInfo) uniform _AtrInfoUniforms { AtrInfo ai; };
 layout(set = 1, binding = eAtrSamplerLinear) uniform sampler AtrSampLin;
 layout(set = 1, binding = eAtrTexture) uniform texture3D atrTexture;
 
+layout(set = 1, binding = eAtrSamplerMinMax) uniform sampler AtrSampMax;
+
+
 // clang-format on
 hitAttributeEXT vec2 attribs;
 void main()
@@ -74,10 +77,37 @@ void main()
   
   vec3 normalizedCoord = (pos - ai.minPoint.xyz) / ai.dimension.xyz;
 
-  float attr =  texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
+  float attr;
+  if(ai.refineAnyHit != 0)
+    attr = texture(sampler3D(atrTexture, AtrSampMax), normalizedCoord).x;
+  else
+    attr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
 
   prd.hitValue = vec3(attr);
   if (attr < ai.ISOValue)
     ignoreIntersectionEXT;
+  else {
+#if 1
+    if(ai.refineAnyHit != 0)
+    {
+        vec3 rayDirInv = gl_WorldRayDirectionEXT;
+        float stepSize = 1.f;//min(1.0f/ai.dimension.x, min(1.0f/ai.dimension.y, 1.0f/ai.dimension.z));
+        vec3 lastPos = pos + rayDirInv * stepSize;
 
+        for (int i=0; i<10; i++) {
+          vec3 midPos = (pos + lastPos)/2.f;
+          vec3 normalizedCoord = (midPos - ai.minPoint.xyz) / ai.dimension.xyz;
+          float attri = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).r;
+          if (attri >= ai.ISOValue) {
+            //ignoreIntersectionEXT;
+            return;    
+          } else {
+            lastPos = midPos;
+          }
+        }
+        ignoreIntersectionEXT;
+     }
+#endif
+     return;
+  }
 }
