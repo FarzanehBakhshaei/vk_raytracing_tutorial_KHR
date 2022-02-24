@@ -34,8 +34,20 @@
 #include "nvpsystem.hpp"
 #include "nvvk/commands_vk.hpp"
 #include "nvvk/context_vk.hpp"
+#include "transfer_function_widget.h"
 
 #include <random>
+
+namespace tfnw {
+uint8_t rainbow2[] = {0x89, 0x50, 0x4e, 0x47, 0xd,  0xa,  0x1a, 0xa,  0x0,  0x0,  0x0,  0xd,  0x49, 0x48, 0x44, 0x52,
+                     0x0,  0x0,  0x0,  0xb4, 0x0,  0x0,  0x0,  0x1,  0x8,  0x6,  0x0,  0x0,  0x0,  0x77, 0xca, 0x84,
+                     0xf4, 0x0,  0x0,  0x0,  0x46, 0x49, 0x44, 0x41, 0x54, 0x78, 0x5e, 0x63, 0x64, 0x60, 0xf8, 0xff,
+                     0x9f, 0x81, 0x85, 0x81, 0x1,  0x8c, 0x39, 0x70, 0xd0, 0x20, 0xf9, 0xc1, 0x24, 0xc7, 0xfe, 0x1f,
+                     0xe8, 0xd0, 0x3f, 0x40, 0xfc, 0x3,  0x8d, 0xc6, 0x26, 0x6,  0x53, 0x33, 0xb0, 0x72, 0x4c, 0xc,
+                     0xff, 0x18, 0xd0, 0x83, 0x70, 0xb0, 0x5,  0x2b, 0xba, 0xfb, 0x18, 0x7f, 0x42, 0x83, 0x77, 0xf0,
+                     0x6,  0x2b, 0x3,  0x3,  0xb2, 0xdb, 0xfe, 0x30, 0x30, 0x0,  0x0,  0x85, 0x9e, 0x5d, 0x0,  0x63,
+                     0x5b, 0x7,  0x6f, 0x0,  0x0,  0x0,  0x0,  0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82};
+}
 
 //////////////////////////////////////////////////////////////////////////
 #define UNUSED(x) (void)(x)
@@ -244,6 +256,9 @@ int main(int argc, char** argv)
   helloVk.addImplCube({-6.1, 0, -6}, {-6, 10, 6}, 0);
   helloVk.addImplSphere({1, 2, 4}, 1.f, 1);
 
+  tfnw::TransferFunctionWidget tfn_widget;
+  //tfn_widget.add_colormap(tfnw::Colormap("fary", std::vector<uint8_t>(tfnw::rainbow2, tfnw::rainbow2 + sizeof(tfnw::rainbow2)),
+   //                                      tfnw::ColorSpace::LINEAR));
 
   helloVk.initOffscreen();
   Offscreen& offscreen = helloVk.offscreen();
@@ -256,6 +271,7 @@ int main(int argc, char** argv)
   helloVk.createUniformBuffer();
   helloVk.createObjDescriptionBuffer();
   helloVk.createAtrInfoBuffer();
+  helloVk.createColormap();
   helloVk.updateDescriptorSet();
 
   // #VKRay
@@ -296,6 +312,10 @@ int main(int argc, char** argv)
       renderUI(helloVk);
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
       ImGuiH::Control::Info("", "", "(F10) Toggle Pane", ImGuiH::Control::Flags::Disabled);
+            
+      // tfnw
+      tfn_widget.draw_ui();
+      
       ImGuiH::Panel::End();
     }
 
@@ -309,6 +329,14 @@ int main(int argc, char** argv)
     VkCommandBufferBeginInfo beginInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     vkBeginCommandBuffer(cmdBuf, &beginInfo);
+
+    // tfnw and updating colomap
+    //tfn_widget.update_gpu_image(cmdBuf, &helloVk.m_alloc);
+  
+    std::vector<uint8_t> colormap = tfn_widget.get_colormap();
+    helloVk.updateColormap(cmdBuf, colormap);
+     
+    
 
     // Updating camera buffer
     helloVk.updateUniformBuffer(cmdBuf);

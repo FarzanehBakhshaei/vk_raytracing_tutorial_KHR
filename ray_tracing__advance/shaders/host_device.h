@@ -48,7 +48,8 @@ START_BINDING(SceneBindings)
   eAtrTexture = 4,
   eAtrInfo = 5,
   eAtrSamplerLinear = 6,
-  eAtrSamplerMinMax = 7  
+  eAtrSamplerMinMax = 7,
+  eColormapTexture = 8
 END_BINDING();
 
 START_BINDING(RtxBindings)
@@ -81,7 +82,7 @@ struct AtrInfo
   vec4 dimension;
   float ISOValue;
   int   refineAnyHit;
-  int   padding[2];
+  float minAtrValue, maxAtrValue;
 };
 
 // Push constant structure for the raster

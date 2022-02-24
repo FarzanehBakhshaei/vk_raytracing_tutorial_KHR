@@ -141,6 +141,10 @@ void HelloVulkan::createDescriptorSetLayout()
   m_descSetLayoutBind.addBinding(SceneBindings::eAtrInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
                                  VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
 
+  // Colormap Texture
+  m_descSetLayoutBind.addBinding(SceneBindings::eColormapTexture, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1,
+                                 VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+
   // Storing implicit obj (binding = 3)
   m_descSetLayoutBind.addBinding(eImplicits, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1,
                                  VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_INTERSECTION_BIT_KHR
@@ -189,10 +193,15 @@ void HelloVulkan::updateDescriptorSet()
   writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, SceneBindings::eAtrSamplerMinMax, &diiSMM));
 
 
-
   // Attributes Info
   VkDescriptorBufferInfo adUni{m_bAtrInfo.buffer, 0, VK_WHOLE_SIZE};
   writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, SceneBindings::eAtrInfo, &adUni));
+
+  // Colormap Texture
+  VkDescriptorImageInfo diiC{m_colormapTexture.descriptor};
+  diiC.sampler = VK_NULL_HANDLE;
+  writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, SceneBindings::eColormapTexture, &diiC));
+
 
   VkDescriptorBufferInfo dbiImplDesc{m_implObjects.implBuf.buffer, 0, VK_WHOLE_SIZE};
   writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, 3, &dbiImplDesc));
@@ -308,10 +317,9 @@ void HelloVulkan::loadModel(const std::string& filename, nvmath::mat4f transform
 void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transform)
 {
   //return;
-  //"C:/Users/morte/Downloads/TopOpti Material Field Volume/testData.dat"x
   //SimVisDataPtr simVisPtr = SimVisData::loadFromFile(filePath);
   SimVisDataPtr simVisPtr = SimVisData::loadSphere(32);
-  std::vector<MaterialObj> materials(256, MaterialObj());
+  std::vector<MaterialObj> materials(128, MaterialObj());
   std::vector<std::string> textures;
 
   int numCellsX = simVisPtr->numCellsX;
@@ -335,6 +343,7 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
     v.texCoord = vec2(1, 1);
 
   }
+  float max = -FLT_MAX, min = FLT_MAX;
 
   for(uint32_t z = 0; z < numCellsZ; z++)
   {
@@ -344,6 +353,15 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
       {
         VertexObj& v = vertices[PT_IDXn(x, y, z)];
         v.atr        = simVisPtr->attributesList[0][z * numCellsY * numCellsX + y * numCellsX + x];
+
+        if(v.atr > max)
+        {
+          max = v.atr;
+        }
+        if(v.atr < min)
+        {
+          min = v.atr;
+        }
       }
     }
   }
@@ -459,8 +477,71 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
   m_atrInfo.dimension = vec4(numCellsX, numCellsY, numCellsZ, 1);
   m_atrInfo.minPoint  = vec4(0, 0, 0, 1);
   m_atrInfo.ISOValue  = 0.077f;
+  m_atrInfo.minAtrValue = min;
+  m_atrInfo.maxAtrValue = max;
 }
 
+
+
+//-------------------------------------------------------------------------------------------------
+
+void HelloVulkan::createColormap()
+{
+  VkImageCreateInfo imageInfo{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+  imageInfo.imageType            = VK_IMAGE_TYPE_1D;
+  imageInfo.extent.width         = static_cast<uint32_t>(720/4);
+  imageInfo.extent.height        = static_cast<uint32_t>(1);
+  imageInfo.extent.depth         = 1;
+  imageInfo.mipLevels            = 1;
+  imageInfo.arrayLayers          = 1;
+  imageInfo.format               = VK_FORMAT_R8G8B8A8_UNORM;
+  imageInfo.tiling               = VK_IMAGE_TILING_OPTIMAL;
+  imageInfo.samples              = VK_SAMPLE_COUNT_1_BIT;
+  imageInfo.initialLayout        = VK_IMAGE_LAYOUT_UNDEFINED;
+  imageInfo.sharingMode          = VK_SHARING_MODE_EXCLUSIVE;
+  imageInfo.usage                = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+
+  nvvk::Image           tex    = m_alloc.createImage(imageInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+  VkImageViewCreateInfo ivInfo   = nvvk::makeImageViewCreateInfo(tex.image, imageInfo);
+  m_colormapTexture            = m_alloc.createTexture(tex, ivInfo);
+}
+
+void HelloVulkan::updateColormap(const VkCommandBuffer& cmdBuff, std::vector<uint8_t> colormap) 
+{    
+  VkOffset3D               offset      = {0};
+  VkImageSubresourceLayers subresource = {0};
+  subresource.aspectMask               = VK_IMAGE_ASPECT_COLOR_BIT;
+  subresource.layerCount               = 1;
+  VkExtent3D extent                    = {static_cast<uint32_t>(720 / 4), static_cast<uint32_t>(1), 1};
+  VkImageLayout imgLayout              = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    // Copy buffer to image
+  VkImageSubresourceRange subresourceRange{};
+  subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+  subresourceRange.baseArrayLayer = 0;
+  subresourceRange.baseMipLevel   = 0;
+  subresourceRange.layerCount     = 1;
+  subresourceRange.levelCount     = 1;
+
+
+  static VkImageLayout currentImgLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  // doing these transitions per copy is not efficient, should do in bulk for many images
+  nvvk::cmdBarrierImageLayout(cmdBuff, m_colormapTexture.image, currentImgLayout,
+                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresourceRange);
+
+  currentImgLayout                      = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+  m_alloc.getStaging()->cmdToImage(cmdBuff, m_colormapTexture.image, offset, extent, subresource,
+                                   (VkDeviceSize)720,
+                                   colormap.data());
+
+
+  // doing these transitions per copy is not efficient, should do in bulk for many images
+  nvvk::cmdBarrierImageLayout(cmdBuff, m_colormapTexture.image, currentImgLayout,
+                              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subresourceRange);
+
+  currentImgLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+}
 
 //--------------------------------------------------------------------------------------------------
 // Creating the uniform buffer holding the camera matrices

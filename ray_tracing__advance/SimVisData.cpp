@@ -119,7 +119,7 @@ SimVisDataPtr SimVisData::loadSphere(int dim)
         float cellAttribute =
             
                                     d2  < r2 ?
-                                  std::sqrtf(d2 / (r2)) :
+                                  (1 - std::sqrtf(d2 / r2)) :       // make attribute value between 0 and 1
                                   0.f;
         attributeList.push_back(cellAttribute);
       }

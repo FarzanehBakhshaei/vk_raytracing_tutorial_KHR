@@ -46,6 +46,7 @@ layout(set = 1, binding = eAtrInfo) uniform _AtrInfoUniforms { AtrInfo ai; };
 layout(set = 1, binding = eAtrSamplerLinear) uniform sampler AtrSampLin;
 layout(set = 1, binding = eAtrTexture) uniform texture3D atrTexture;
 
+layout(set = 1, binding = eColormapTexture) uniform texture1D colormapTexture;
 
 layout(push_constant) uniform _PushConstantRay { PushConstantRay pcRay; };
 // clang-format on
@@ -235,5 +236,5 @@ void main()
   //prd.hitValue = barycentrics;
 
 
-  prd.hitValue = debug_color * vec3(cLight.outIntensity * attenuation * (diffuse + specular));
+ // prd.hitValue =prd.hitValue* vec3(cLight.outIntensity * attenuation * (diffuse + specular));
 }

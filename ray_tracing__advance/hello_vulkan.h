@@ -75,6 +75,8 @@ public:
   void destroyResources();
   void rasterize(const VkCommandBuffer& cmdBuff);
   void loadVolumetricData(const char* filePath, nvmath::mat4f transform = nvmath::mat4f(1)); // mat4f(1) is identity
+  void createColormap();
+  void updateColormap(const VkCommandBuffer& cmdBuff, std::vector<uint8_t> colormap);
 
   Offscreen& offscreen() { return m_offscreen; }
   Raytracer& raytracer() { return m_raytrace; }
@@ -115,7 +117,7 @@ public:
   nvvk::Buffer m_bAtrInfo;   // Device buffer of the attribute info
 
   std::vector<nvvk::Texture> m_textures;  // vector of all textures of the scene
-
+  nvvk::Texture              m_colormapTexture;
 
   Allocator       m_alloc;  // Allocator for buffer, images, acceleration structures
   nvvk::DebugUtil m_debug;  // Utility to name objects

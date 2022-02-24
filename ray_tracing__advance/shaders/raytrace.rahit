@@ -45,9 +45,14 @@ layout(set = 1, binding = eAtrTexture) uniform texture3D atrTexture;
 
 layout(set = 1, binding = eAtrSamplerMinMax) uniform sampler AtrSampMax;
 
+layout(set = 1, binding = eColormapTexture) uniform texture1D colormapTexture;
+
 
 // clang-format on
 hitAttributeEXT vec2 attribs;
+
+vec4 mapColormap (float value);
+
 void main()
 {
 // Object data
@@ -65,6 +70,7 @@ void main()
   Vertex v1 = vertices.v[ind.y];
   Vertex v2 = vertices.v[ind.z];
 
+  
   const vec3 barycentrics = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
 
   // Computing the normal at hit position
@@ -83,11 +89,14 @@ void main()
   else
     attr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
 
-  prd.hitValue = vec3(attr);
-  if (attr < ai.ISOValue)
+  
+  if (attr < ai.ISOValue) {
     ignoreIntersectionEXT;
+  }
   else {
-#if 1
+    prd.hitValue = mapColormap(attr).rgb;
+
+#if 0
     if(ai.refineAnyHit != 0)
     {
         vec3 rayDirInv = gl_WorldRayDirectionEXT;
@@ -106,8 +115,16 @@ void main()
           }
         }
         ignoreIntersectionEXT;
+        prd.color += vec4 (0,0.1f,0,0.1f);
      }
 #endif
      return;
   }
+  
+}
+
+vec4 mapColormap (float value) {
+    float normalizedValue = (value - ai.minAtrValue) / (ai.maxAtrValue - ai.minAtrValue);
+    vec4 color =  texture(sampler1D(colormapTexture, AtrSampLin), normalizedValue);
+    return color;
 }
