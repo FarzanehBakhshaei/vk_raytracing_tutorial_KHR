@@ -87,9 +87,9 @@ void main()
   ObjDesc           objResource = objDesc.i[gl_InstanceCustomIndexEXT];
 
   // Diffuse
-  vec3 diffuse = vec3(dot(cLight.outLightDir, normal));
+  vec4 diffuse = vec4(dot(cLight.outLightDir, normal));
 
-  vec3  specular    = vec3(0);
+  vec4  specular    = vec4(0);
   float attenuation = 1;
 
   // Tracing shadow ray only if the light is visible from the surface
@@ -125,5 +125,5 @@ void main()
     }
   }
 
-  prd.hitValue = vec3(cLight.outIntensity * attenuation * (diffuse + specular));
+  prd.hitValue = vec4(cLight.outIntensity * attenuation * (diffuse + specular));
 }

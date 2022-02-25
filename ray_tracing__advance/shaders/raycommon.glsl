@@ -19,10 +19,10 @@
 
 struct hitPayload
 {
-  vec3 hitValue;
+  vec4 hitValue;
   uint seed;
   int  depth;
-  vec3 attenuation;
+  vec4 attenuation;
   int  done;
   vec3 rayOrigin;
   vec3 rayDir;

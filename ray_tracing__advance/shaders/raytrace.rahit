@@ -89,12 +89,19 @@ void main()
   else
     attr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
 
-  
-  if (attr < ai.ISOValue) {
+  // Front-to-back strategy
+  vec4 C = mapColormap(attr);
+  float a = C.a; 
+  float ain =  prd.hitValue.a;
+  vec3 Cin = prd.hitValue.rgb;
+  prd.hitValue.rgb = Cin + (1 - ain) * a * C.rgb;
+  prd.hitValue.a = ain + (1 - ain) * a;
+
+  if (prd.hitValue.a < 0.95f) // ( attr < ai.ISOValue)
+  {
     ignoreIntersectionEXT;
   }
   else {
-    prd.hitValue = mapColormap(attr).rgb;
 
 #if 0
     if(ai.refineAnyHit != 0)
@@ -115,7 +122,7 @@ void main()
           }
         }
         ignoreIntersectionEXT;
-        prd.color += vec4 (0,0.1f,0,0.1f);
+        prd.hitValue += vec4 (0,0.1f,0,0.1f, 0.1f);
      }
 #endif
      return;
