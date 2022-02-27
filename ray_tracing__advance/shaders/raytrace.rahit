@@ -87,9 +87,11 @@ void main()
   vec3 normalizedCoord = (pos - ai.minPoint.xyz) / ai.dimension.xyz;
 
   float attr;
+#if 0
   if(ai.refineAnyHit != 0)
     attr = texture(sampler3D(atrTexture, AtrSampMax), normalizedCoord).x;
   else
+#endif
     attr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
 
   vec4 C = mapColormap(attr);
@@ -148,7 +150,7 @@ void main()
           }
         }
         ignoreIntersectionEXT;
-        prd.hitValue += vec4 (0.f, 0.1f, 0.f, 0.1f, 0.1f);
+        prd.hitValue += vec4 (0.f, 0.1f, 0.f, 0.1f);
      }
 #endif
      return;
