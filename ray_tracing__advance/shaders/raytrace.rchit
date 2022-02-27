@@ -54,6 +54,7 @@ layout(push_constant) uniform _PushConstantRay { PushConstantRay pcRay; };
 
 layout(location = 3) callableDataEXT rayLight cLight;
 
+vec4 mapColormap (float value);
 
 void main()
 {
@@ -123,7 +124,31 @@ void main()
 
   //prd.hitValue = (normal + 1) / 2.0f;
 
+  for(int i=0; i< prd.hitCount; ++i) {
+   for(int j=0; j< (prd.hitCount - 1); ++j) {
+    if(prd.hitDistances[j] > prd.hitDistances[j+1]) {
+      // swap distances
+      float temp = prd.hitDistances[j];
+      prd.hitDistances[j] = prd.hitDistances[j+1];
+      prd.hitDistances[j+1] = temp;
+      // swap attributes
+      temp = prd.hitAttributes[j];
+      prd.hitAttributes[j] = prd.hitAttributes[j+1];
+      prd.hitAttributes[j+1] = temp;
+    }
+   }
+  }
 
+  for(int i=0; i< prd.hitCount; ++i) {
+   // map colormap
+   // Front-to-back strategy
+   vec4 C = mapColormap(prd.hitAttributes[i]);
+   float a = C.a; 
+   float ain =  prd.hitValue.a;
+   vec3 Cin = prd.hitValue.rgb;
+   prd.hitValue.rgb = Cin + (1 - ain) * a * C.rgb;
+   prd.hitValue.a = ain + (1 - ain) * a;
+  }
 
   /*
   // Computing the normal at hit position
@@ -237,4 +262,10 @@ void main()
 
 
  // prd.hitValue =prd.hitValue* vec3(cLight.outIntensity * attenuation * (diffuse + specular));
+}
+
+vec4 mapColormap (float value) {
+    float normalizedValue = (value - ai.minAtrValue) / (ai.maxAtrValue - ai.minAtrValue);
+    vec4 color =  texture(sampler1D(colormapTexture, AtrSampLin), normalizedValue);
+    return color;
 }

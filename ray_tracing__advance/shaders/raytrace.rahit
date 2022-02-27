@@ -61,9 +61,12 @@ void main()
   Materials  materials   = Materials(objResource.materialAddress);
   Indices    indices     = Indices(objResource.indexAddress);
   Vertices   vertices    = Vertices(objResource.vertexAddress);
-
+  
   // Indices of the triangle
-  ivec3 ind = indices.i[gl_PrimitiveID];
+  ivec3 ind              = indices.i[gl_PrimitiveID];
+  
+  // Hit Time
+  float t                = gl_HitTEXT;
 
   // Vertex of the triangle
   Vertex v0 = vertices.v[ind.x];
@@ -89,6 +92,22 @@ void main()
   else
     attr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
 
+  vec4 C = mapColormap(attr);
+  
+  if(C.a > 0.005f){
+    prd.hitAttributes[prd.hitCount] = attr;
+    prd.hitDistances[prd.hitCount]  = t;
+    prd.hitCount++;
+  }
+
+  if(prd.hitCount < maxHitCount) 
+  {
+    ignoreIntersectionEXT;
+  } else
+    return;
+  
+
+#if 0
   // Front-to-back strategy
   vec4 C = mapColormap(attr);
   float a = C.a; 
@@ -96,13 +115,20 @@ void main()
   vec3 Cin = prd.hitValue.rgb;
   prd.hitValue.rgb = Cin + (1 - ain) * a * C.rgb;
   prd.hitValue.a = ain + (1 - ain) * a;
-
-  if (prd.hitValue.a < 0.95f) // ( attr < ai.ISOValue)
+#endif
+  
+  if (t > prd.lastT)//(prd.hitValue.a < 0.95f) // ( attr < ai.ISOValue)
   {
+    prd.lastT = t;
+    // green
+    prd.hitValue = vec4(0.f, 1.f, 0.f, 1.f);
     ignoreIntersectionEXT;
   }
   else {
-
+    prd.lastT = t;
+    // red
+    prd.hitValue = vec4(1.f, 0.f, 0.f, 1.f);
+    
 #if 0
     if(ai.refineAnyHit != 0)
     {
@@ -122,7 +148,7 @@ void main()
           }
         }
         ignoreIntersectionEXT;
-        prd.hitValue += vec4 (0,0.1f,0,0.1f, 0.1f);
+        prd.hitValue += vec4 (0.f, 0.1f, 0.f, 0.1f, 0.1f);
      }
 #endif
      return;

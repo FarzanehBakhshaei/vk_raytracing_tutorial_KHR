@@ -68,12 +68,19 @@ void main()
     float tMin     = 0.001;
     float tMax     = 10000.0;
 
-    prd.done        = 1;
-    prd.rayOrigin   = origin.xyz;
-    prd.rayDir      = direction.xyz;
-    prd.depth       = 0;
-    prd.hitValue    = vec4(0.f, 0.f,0.f ,0.f);
-    prd.attenuation = vec4(1.f, 1.f, 1.f, 1.f);
+    prd.done                = 1;
+    prd.rayOrigin           = origin.xyz;
+    prd.rayDir              = direction.xyz;
+    prd.depth               = 0;
+    prd.hitValue            = vec4(0.f, 0.f,0.f ,0.f);
+    prd.attenuation         = vec4(1.f, 1.f, 1.f, 1.f);
+    prd.lastT               = -1.f;
+    prd.hitCount            = 0;
+
+    for(int i=0; i<maxHitCount; i++) {
+        prd.hitAttributes[i] = 0.f;
+        prd.hitDistances[i]  = 0.f;
+    }
 
     //for(;;)
     //{

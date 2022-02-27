@@ -17,15 +17,21 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#define maxHitCount 10
+
 struct hitPayload
 {
-  vec4 hitValue;
-  uint seed;
-  int  depth;
-  vec4 attenuation;
-  int  done;
-  vec3 rayOrigin;
-  vec3 rayDir;
+  vec4    hitValue;
+  uint    seed;
+  int	  depth;
+  vec4    attenuation;
+  int     done;
+  vec3    rayOrigin;
+  vec3    rayDir;
+  float	  lastT;
+  float   hitAttributes[maxHitCount];
+  float   hitDistances[maxHitCount];
+  int     hitCount;
 };
 
 

@@ -210,8 +210,8 @@ int main(int argc, char** argv)
   helloVk.initGUI(0);  // Using sub-pass 0
 
   // Creation of the example
-  //helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData1_snapshot.dat", defaultSearchPaths, true).c_str());
-  helloVk.loadVolumetricData(nvh::findFile("media/scenes/kitten_132_115_200_its500.dat", defaultSearchPaths, true).c_str());
+  helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData1_snapshot.dat", defaultSearchPaths, true).c_str());
+  //helloVk.loadVolumetricData(nvh::findFile("media/scenes/kitten_132_115_200_its500.dat", defaultSearchPaths, true).c_str());
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData.dat", defaultSearchPaths, true).c_str());
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/femur3D_144_96_184_A_its400.dat", defaultSearchPaths, true).c_str());
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/cantilever3D_256_128_128_iLoad3_R20_its500.dat", defaultSearchPaths, true).c_str());
