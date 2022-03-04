@@ -54,7 +54,9 @@ END_BINDING();
 
 START_BINDING(RtxBindings)
   eTlas     = 0,  // Top-level acceleration structure
-  eOutImage = 1   // Ray tracer output image
+  eOutImage = 1,   // Ray tracer output image
+  eFirstElementIndex = 2,
+  eFloat = 3
 END_BINDING();
 // clang-format on
 
@@ -83,6 +85,8 @@ struct AtrInfo
   float ISOValue;
   int   refineAnyHit;
   float minAtrValue, maxAtrValue;
+  vec3  planeNormal;
+  vec3  planePosition;
 };
 
 // Push constant structure for the raster

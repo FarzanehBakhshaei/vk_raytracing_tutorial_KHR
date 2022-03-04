@@ -214,6 +214,8 @@ void Raytracer::createRtDescriptorSet(const VkImageView& outputImage)
   descASInfo.accelerationStructureCount = 1;
   descASInfo.pAccelerationStructures    = &tlas;
   VkDescriptorImageInfo imageInfo{{}, outputImage, VK_IMAGE_LAYOUT_GENERAL};
+  /*VkDescriptorImageInfo imageInfo2{{}, , VK_IMAGE_LAYOUT_GENERAL};
+  VkDescriptorImageInfo imageInfo3{{}, , VK_IMAGE_LAYOUT_GENERAL};*/
 
 
   std::vector<VkWriteDescriptorSet> writes;

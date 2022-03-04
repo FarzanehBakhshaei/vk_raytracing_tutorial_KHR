@@ -127,11 +127,13 @@ void HelloVulkan::createDescriptorSetLayout()
 
   // Attributes
   m_descSetLayoutBind.addBinding(SceneBindings::eAtrTexture, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1,
-                                 VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+                                 VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR
+                                     | VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_COMPUTE_BIT);
   
   // AttributeSamplerLinear
   m_descSetLayoutBind.addBinding(SceneBindings::eAtrSamplerLinear, VK_DESCRIPTOR_TYPE_SAMPLER, 1,
-                                 VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+                                 VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR
+                                     | VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_COMPUTE_BIT);
   
   // AttributeSamplerMinMax
   m_descSetLayoutBind.addBinding(SceneBindings::eAtrSamplerMinMax, VK_DESCRIPTOR_TYPE_SAMPLER, 1,
@@ -139,11 +141,13 @@ void HelloVulkan::createDescriptorSetLayout()
 
   // AttributesDimension
   m_descSetLayoutBind.addBinding(SceneBindings::eAtrInfo, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
-                                 VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+                                 VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR | VK_SHADER_STAGE_RAYGEN_BIT_KHR
+                                | VK_SHADER_STAGE_COMPUTE_BIT);
 
   // Colormap Texture
   m_descSetLayoutBind.addBinding(SceneBindings::eColormapTexture, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1,
-                                 VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+                                 VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR
+                                     | VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_COMPUTE_BIT);
 
   // Storing implicit obj (binding = 3)
   m_descSetLayoutBind.addBinding(eImplicits, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1,
@@ -766,8 +770,8 @@ void HelloVulkan::initRayTracing()
 void HelloVulkan::raytrace(const VkCommandBuffer& cmdBuf, const nvmath::vec4f& clearColor)
 {
   updateFrame();
-  if(m_pcRaster.frame >= m_maxFrames)
-    return;
+  //if(m_pcRaster.frame >= m_maxFrames)
+  //  return;
 
   m_raytrace.raytrace(cmdBuf, clearColor, m_descSet, m_size, m_pcRaster);
 }
@@ -784,7 +788,7 @@ void HelloVulkan::updateFrame()
   const auto& m   = CameraManip.getMatrix();
   const auto  fov = CameraManip.getFov();
 
-  if(memcmp(&refCamMatrix.a00, &m.a00, sizeof(nvmath::mat4f)) != 0 || refFov != fov)
+  //if(memcmp(&refCamMatrix.a00, &m.a00, sizeof(nvmath::mat4f)) != 0 || refFov != fov)
   {
     resetFrame();
     refCamMatrix = m;

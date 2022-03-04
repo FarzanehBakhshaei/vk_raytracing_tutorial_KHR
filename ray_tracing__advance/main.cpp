@@ -35,6 +35,7 @@
 #include "nvvk/commands_vk.hpp"
 #include "nvvk/context_vk.hpp"
 #include "transfer_function_widget.h"
+#include "imGuIZMOquat.h"
 
 #include <random>
 
@@ -108,6 +109,16 @@ void renderUI(HelloVulkan& helloVk)
   
   //ISOValue
   changed |= ImGui::SliderFloat("ISOValue", &helloVk.m_atrInfo.ISOValue, 0.0f, 2.0f);
+  
+  vgm::Vec3 dir(helloVk.m_atrInfo.planeNormal.x, helloVk.m_atrInfo.planeNormal.y, helloVk.m_atrInfo.planeNormal.z);
+  changed |= ImGui::gizmo3D("Plane Normal", dir, 100, imguiGizmo::modeDirPlane);
+  helloVk.m_atrInfo.planeNormal.x = dir.x;
+  helloVk.m_atrInfo.planeNormal.y = dir.y;
+  helloVk.m_atrInfo.planeNormal.z = dir.z;
+  
+  //changed |= ImGui::SliderFloat3("Plane Normal", (float*)&helloVk.m_atrInfo.planeNormal, 0.0f, 360.0f);
+  
+  changed |= ImGui::SliderFloat3("Plane Position", (float*)&helloVk.m_atrInfo.planePosition, -10000.f, 10000.f);
 
   static bool refineAnyHit;
   changed |= ImGui::Checkbox("Refine Any-Hit", &refineAnyHit);
@@ -284,6 +295,8 @@ int main(int argc, char** argv)
 
   helloVk.setupGlfwCallbacks(window);
   ImGui_ImplGlfw_InitForVulkan(window, true);
+
+
 
   // Main loop
   while(!glfwWindowShouldClose(window))
