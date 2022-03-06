@@ -117,8 +117,8 @@ void renderUI(HelloVulkan& helloVk)
   helloVk.m_atrInfo.planeNormal.z = dir.z;
   
   //changed |= ImGui::SliderFloat3("Plane Normal", (float*)&helloVk.m_atrInfo.planeNormal, 0.0f, 360.0f);
-  
-  changed |= ImGui::SliderFloat3("Plane Position", (float*)&helloVk.m_atrInfo.planePosition, -10000.f, 10000.f);
+
+  changed |= ImGui::SliderFloat3("Plane Position", (float*)&helloVk.m_atrInfo.planePosition, -100.f, 100.f);
 
   static bool refineAnyHit;
   changed |= ImGui::Checkbox("Refine Any-Hit", &refineAnyHit);
@@ -219,6 +219,8 @@ int main(int argc, char** argv)
 
   // Setup Imgui
   helloVk.initGUI(0);  // Using sub-pass 0
+  helloVk.m_atrInfo.planePosition.y = 50.;
+  helloVk.m_atrInfo.planePosition.z = 100;
 
   // Creation of the example
   helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData1_snapshot.dat", defaultSearchPaths, true).c_str());

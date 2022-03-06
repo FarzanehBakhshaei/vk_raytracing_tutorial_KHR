@@ -45,6 +45,7 @@ layout(set = 1, binding = eColormapTexture) uniform texture1D colormapTexture;
 const int NBSAMPLES = 1;
 
 vec4 mapColormap (float value);
+#define ENABLED_REFINEMENT 1
 
 void main()
 {
@@ -133,20 +134,78 @@ void main()
                   0               // payload (location = 0)
       );
 #else
+    hitValues = vec4 (pcRay.clearColor.xyz * 0.8, 1.f);
     
-    if(tMax > tMin && tMin > 0) {
-        float stepSize = (tMax - tMin) / 100.f;
+    float tPlane = dot((ai.planePosition - origin.xyz), ai.planeNormal) / dot (ai.planeNormal, direction.xyz);
+    //tMax = min(tMax, tPlane);
+    float planeSize = length(maxCorner - minCorner) * 1.5f;
+    vec3 distanceToPlaneCenter = origin.xyz + tPlane * direction.xyz - ai.planePosition;
+    bool ignoreRayTracing = false;
+    
+    vec3 entryPos = origin.xyz + tMin * direction.xyz;
+    vec3 exitPos = origin.xyz + tMax * direction.xyz;
+
+    float entryPosProj = dot(entryPos - ai.planePosition, ai.planeNormal);
+    float exitPosProj = dot(exitPos - ai.planePosition, ai.planeNormal);
+    bool stopRay = false;
+
+    // if both entry and exit points are on the side of the clip plane that 
+    // they should be clipped
+    if(entryPosProj > 0 && exitPosProj > 0) {
+        ignoreRayTracing = true;
+    }
+
+    // if entry point is on the side of plane that should be clipped
+    if(entryPosProj > 0)
+        tMin = max(tMin, tPlane);
+
+    // if exit point is on the side of plane that should be clipped 
+    if(exitPosProj > 0)
+        tMax = min(tMax, tPlane);
+        
+    if(abs(length(distanceToPlaneCenter) - planeSize / 2) < 2) {
+        //ignoreRayTracing = true;
+        tMax = min(tMax, tPlane);
+        hitValues = vec4 (1.f, 0.f, 0.f, 0.f);
+    }
+    
+    if(length(distanceToPlaneCenter) < 2 && dot(distanceToPlaneCenter, ai.planeNormal) > 0) {
+        ignoreRayTracing = true;
+        hitValues = vec4 (0.f, 0.f, 1.f, 0.f);
+    }
+        
+    if(tMax > tMin && tMin > 0 && !ignoreRayTracing) {
+        float stepSize = length(maxCorner - minCorner) / 200.f;//(tMax - tMin) / 100.f;
         float t = tMin;
-        for(int i=0; i<100; ++i) {
+        
+        for(int i=0; i<500 && t < tMax; ++i , t += stepSize) {
             vec3 p = origin.xyz + t * direction.xyz;
             vec3 normalizedCoord = (p - ai.minPoint.xyz) / ai.dimension.xyz;
             float attr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
-            if(attr >= ai.ISOValue) {
+#if 1
+            if(attr >= ai.ISOValue) 
+            {
+#if ENABLED_REFINEMENT
+                vec3 lastPos = origin.xyz + (t-stepSize) * direction.xyz;
+                for (int i=0; i<10; i++) {
+                    vec3 midPos = (p + lastPos)/2.f;
+                    normalizedCoord = (midPos - ai.minPoint.xyz) / ai.dimension.xyz;
+                    attr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
+                    if(attr >= ai.ISOValue) {
+                        p = midPos;
+                    } else {
+                        lastPos = midPos;
+                    }
+                }
+#endif
+                normalizedCoord = (p - ai.minPoint.xyz) / ai.dimension.xyz;
+                attr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
                 hitValues = mapColormap(attr);
                 break;
-            }
-            t += stepSize;
+            } 
+#endif
         }
+
     }
 #endif
 
