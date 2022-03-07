@@ -190,19 +190,7 @@ void main()
 #if ENABLED_ISOVALUE
             if(attr >= ai.ISOValue) 
             {
-                // lighting. Computing normal with gradient of the surface
-                float f_XPlusDeltaX    = texture(sampler3D(atrTexture, AtrSampLin), clamp (normalizedCoord + vec3(1.0f/ai.dimension.x, 0.0f, 0.0f), 0.0f, 1.0f)).r;
-                float f_XMinusDeltaX   = texture(sampler3D(atrTexture, AtrSampLin), clamp (normalizedCoord - vec3(1.0f/ai.dimension.x, 0.0f, 0.0f), 0.0f, 1.0f)).r;
-                float f_YPlusDeltaY    = texture(sampler3D(atrTexture, AtrSampLin), clamp (normalizedCoord + vec3(0.0f, 1.0f/ai.dimension.y, 0.0f), 0.0f, 1.0f)).r;
-                float f_YMinusDeltaY   = texture(sampler3D(atrTexture, AtrSampLin), clamp (normalizedCoord - vec3(0.0f, 1.0f/ai.dimension.y, 0.0f), 0.0f, 1.0f)).r;
-                float f_ZPlusDeltaZ    = texture(sampler3D(atrTexture, AtrSampLin), clamp (normalizedCoord + vec3(0.0f, 0.0f, 1.0f/ai.dimension.z), 0.0f, 1.0f)).r;
-                float f_ZMinusDeltaZ   = texture(sampler3D(atrTexture, AtrSampLin), clamp (normalizedCoord - vec3(0.0f, 0.0f, 1.0f/ai.dimension.z), 0.0f, 1.0f)).r;
                 
-                vec3 n = vec3 (f_XPlusDeltaX - f_XMinusDeltaX, f_YPlusDeltaY - f_YMinusDeltaY, f_ZPlusDeltaZ - f_ZMinusDeltaZ) * ai.dimension.xyz * 0.5f;
-                if(dot(n, n) < 0.001f)    // |n^2| < 0.001f
-                    normal = vec3(0.0f);
-                else
-                    normal = normalize(n);
 #if ENABLED_REFINEMENT
                 vec3 lastPos = origin.xyz + (t-stepSize) * direction.xyz;
                 for (int i=0; i<10; i++) {
@@ -216,6 +204,20 @@ void main()
                     }
                 }
 #endif
+                // lighting. Computing normal with gradient of the surface
+                float f_XPlusDeltaX    = texture(sampler3D(atrTexture, AtrSampLin), clamp (normalizedCoord + vec3(1.0f/ai.dimension.x, 0.0f, 0.0f), 0.0f, 1.0f)).r;
+                float f_XMinusDeltaX   = texture(sampler3D(atrTexture, AtrSampLin), clamp (normalizedCoord - vec3(1.0f/ai.dimension.x, 0.0f, 0.0f), 0.0f, 1.0f)).r;
+                float f_YPlusDeltaY    = texture(sampler3D(atrTexture, AtrSampLin), clamp (normalizedCoord + vec3(0.0f, 1.0f/ai.dimension.y, 0.0f), 0.0f, 1.0f)).r;
+                float f_YMinusDeltaY   = texture(sampler3D(atrTexture, AtrSampLin), clamp (normalizedCoord - vec3(0.0f, 1.0f/ai.dimension.y, 0.0f), 0.0f, 1.0f)).r;
+                float f_ZPlusDeltaZ    = texture(sampler3D(atrTexture, AtrSampLin), clamp (normalizedCoord + vec3(0.0f, 0.0f, 1.0f/ai.dimension.z), 0.0f, 1.0f)).r;
+                float f_ZMinusDeltaZ   = texture(sampler3D(atrTexture, AtrSampLin), clamp (normalizedCoord - vec3(0.0f, 0.0f, 1.0f/ai.dimension.z), 0.0f, 1.0f)).r;
+                
+                vec3 n = vec3 (f_XPlusDeltaX - f_XMinusDeltaX, f_YPlusDeltaY - f_YMinusDeltaY, f_ZPlusDeltaZ - f_ZMinusDeltaZ) * ai.dimension.xyz * 0.5f;
+                if(dot(n, n) < 0.001f)    // |n^2| < 0.001f
+                    normal = vec3(0.0f);
+                else
+                    normal = normalize(n);
+
                 normalizedCoord = (p - ai.minPoint.xyz) / ai.dimension.xyz;
                 attr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
                 hitValues = mapColormap(attr);
@@ -347,8 +349,6 @@ void main()
     // First frame, replace the value in the buffer
     imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(prd.hitValue.rgb, 1.f));
   }
-
-  
   
 }
 
