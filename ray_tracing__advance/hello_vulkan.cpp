@@ -421,6 +421,7 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
   samplerCreateInfo.maxLod      = 1;
   samplerCreateInfo.anisotropyEnable = VK_TRUE;
   samplerCreateInfo.maxAnisotropy    = 16;
+  samplerCreateInfo.unnormalizedCoordinates = VK_FALSE;
 
   // create linear sampler
   if(vkCreateSampler(m_device, &samplerCreateInfo, nullptr, &m_linearSampler) != VK_SUCCESS)
