@@ -118,7 +118,11 @@ void renderUI(HelloVulkan& helloVk)
   
   //changed |= ImGui::SliderFloat3("Plane Normal", (float*)&helloVk.m_atrInfo.planeNormal, 0.0f, 360.0f);
 
-  changed |= ImGui::SliderFloat3("Plane Position", (float*)&helloVk.m_atrInfo.planePosition, -100.f, 100.f);
+  vgm::Vec3 pos(helloVk.m_atrInfo.planePosition.x, helloVk.m_atrInfo.planePosition.y, helloVk.m_atrInfo.planePosition.z);
+  changed |= ImGui::SliderFloat3("Plane Position", (float*)&pos, -100.f, 100.f);
+  helloVk.m_atrInfo.planePosition.x = pos.x;
+  helloVk.m_atrInfo.planePosition.y = pos.y;
+  helloVk.m_atrInfo.planePosition.z = pos.z;
 
   static bool refineAnyHit;
   changed |= ImGui::Checkbox("Refine Any-Hit", &refineAnyHit);
@@ -219,6 +223,7 @@ int main(int argc, char** argv)
 
   // Setup Imgui
   helloVk.initGUI(0);  // Using sub-pass 0
+  helloVk.m_atrInfo.planePosition.x = 0.;
   helloVk.m_atrInfo.planePosition.y = 50.;
   helloVk.m_atrInfo.planePosition.z = 100;
 

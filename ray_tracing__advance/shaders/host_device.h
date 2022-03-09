@@ -80,13 +80,13 @@ struct GlobalUniforms
 
 struct AtrInfo
 {
-  vec4 minPoint;
-  vec4 dimension;
-  float ISOValue;
   int   refineAnyHit;
+  float ISOValue;
   float minAtrValue, maxAtrValue;
-  vec3  planeNormal;
-  vec3  planePosition;
+  vec4  planeNormal;
+  vec4  planePosition;
+  vec4  minPoint;
+  vec4  dimension;
 };
 
 // Push constant structure for the raster

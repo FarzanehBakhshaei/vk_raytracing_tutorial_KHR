@@ -41,3 +41,5 @@ vec3 computeSpecular(vec3 viewDir, vec3 lightDir, vec3 normal)
 
   return vec3(specular);
 }
+
+
