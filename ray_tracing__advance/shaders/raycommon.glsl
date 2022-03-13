@@ -29,9 +29,10 @@ struct hitPayload
   vec3    rayOrigin;
   vec3    rayDir;
   float	  lastT;
-  float   hitAttributes[maxHitCount];
-  float   hitDistances[maxHitCount];
+  //float   hitAttributes[maxHitCount];
+  //float   hitDistances[maxHitCount];
   int     hitCount;
+  float   tHit;
 };
 
 

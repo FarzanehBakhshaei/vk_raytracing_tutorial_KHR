@@ -119,7 +119,7 @@ void renderUI(HelloVulkan& helloVk)
   //changed |= ImGui::SliderFloat3("Plane Normal", (float*)&helloVk.m_atrInfo.planeNormal, 0.0f, 360.0f);
 
   vgm::Vec3 pos(helloVk.m_atrInfo.planePosition.x, helloVk.m_atrInfo.planePosition.y, helloVk.m_atrInfo.planePosition.z);
-  changed |= ImGui::SliderFloat3("Plane Position", (float*)&pos, -100.f, 100.f);
+  changed |= ImGui::SliderFloat3("Plane Position", (float*)&pos, -helloVk.m_center.x * 3.f, helloVk.m_center.x * 3.f);
   helloVk.m_atrInfo.planePosition.x = pos.x;
   helloVk.m_atrInfo.planePosition.y = pos.y;
   helloVk.m_atrInfo.planePosition.z = pos.z;
@@ -132,6 +132,7 @@ void renderUI(HelloVulkan& helloVk)
   if(changed)
     helloVk.resetFrame();
 }
+
 
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
@@ -223,21 +224,37 @@ int main(int argc, char** argv)
 
   // Setup Imgui
   helloVk.initGUI(0);  // Using sub-pass 0
-  helloVk.m_atrInfo.planePosition.x = 0.;
+  /*helloVk.m_atrInfo.planePosition.x = 0.;
   helloVk.m_atrInfo.planePosition.y = 50.;
-  helloVk.m_atrInfo.planePosition.z = 100;
+  helloVk.m_atrInfo.planePosition.z = 100;*/
+
+  
 
   // Creation of the example
-  //helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData1_snapshot.dat", defaultSearchPaths, true).c_str());
-  helloVk.loadVolumetricData(nvh::findFile("media/scenes/kitten_132_115_200_its500.dat", defaultSearchPaths, true).c_str());
+  helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData1_snapshot.dat", defaultSearchPaths, true).c_str());
+  //helloVk.loadVolumetricData(nvh::findFile("media/scenes/kitten_132_115_200_its500.dat", defaultSearchPaths, true).c_str());
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData.dat", defaultSearchPaths, true).c_str());
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/femur3D_144_96_184_A_its400.dat", defaultSearchPaths, true).c_str());
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/cantilever3D_256_128_128_iLoad3_R20_its500.dat", defaultSearchPaths, true).c_str());
 
-  //helloVk.loadModel(nvh::findFile("media/scenes/Medieval_building.obj", defaultSearchPaths, true));
-  //helloVk.loadModel(nvh::findFile("media/scenes/plane.obj", defaultSearchPaths, true));
+  vec3 camLookPoint = helloVk.m_atrInfo.minPoint + helloVk.m_atrInfo.dimension / 2.0f; 
+
+  CameraManip.setLookat({164, -347, 91}, camLookPoint, {0.000, 0.000, 1.000});
+
+ /* nvmath::mat4f transform = helloVk.calculateTransform(
+                                               vec3(helloVk.m_atrInfo.planeNormal.x, 
+                                                    helloVk.m_atrInfo.planeNormal.y, 
+                                                    helloVk.m_atrInfo.planeNormal.z),
+                                               vec3(helloVk.m_center.x, 
+                                                    helloVk.m_center.y, 
+                                                    helloVk.m_center.z));*/
+  helloVk.loadModel(nvh::findFile("media/scenes/clipPlane2.obj", defaultSearchPaths, true));//, transform);
+  //helloVk.loadModel(nvh::findFile("media/scenes/clipPlane.obj", defaultSearchPaths, true));  //, transform);
+  helloVk.loadModel(nvh::findFile("media/scenes/normal.obj", defaultSearchPaths, true));
   //helloVk.loadModel(nvh::findFile("media/scenes/wuson.obj", defaultSearchPaths, true),
                     //nvmath::scale_mat4(nvmath::vec3f(0.5f)) * nvmath::translation_mat4(nvmath::vec3f(0.0f, 0.0f, 6.0f)));
+
+  nvvk::AccelKHR tlas;
 
   std::random_device              rd;         // Will be used to obtain a seed for the random number engine
   std::mt19937                    gen(rd());  // Standard mersenne_twister_engine seeded with rd()
@@ -271,8 +288,8 @@ int main(int argc, char** argv)
   mat.illum    = 4;
   mat.dissolve = 0.5;
   helloVk.addImplMaterial(mat);
-  helloVk.addImplCube({-6.1, 0, -6}, {-6, 10, 6}, 0);
-  helloVk.addImplSphere({1, 2, 4}, 1.f, 1);
+  //helloVk.addImplCube({-6.1, 0, -6}, {-6, 10, 6}, 0);
+  //helloVk.addImplSphere({1, 2, 4}, 1.f, 1);
 
   tfnw::TransferFunctionWidget tfn_widget;
   //tfn_widget.add_colormap(tfnw::Colormap("fary", std::vector<uint8_t>(tfnw::rainbow2, tfnw::rainbow2 + sizeof(tfnw::rainbow2)),

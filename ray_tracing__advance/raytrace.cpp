@@ -47,12 +47,16 @@ void Raytracer::setup(const VkDevice& device, const VkPhysicalDevice& physicalDe
   m_debug.setup(device);
 }
 
+constexpr int MAX_IN_FLIGHT_FRAMES = 10;
+int           currFrameIdx         = 0; 
+
 
 void Raytracer::destroy()
 {
   m_sbtWrapper.destroy();
   m_rtBuilder.destroy();
-  vkDestroyDescriptorPool(m_device, m_rtDescPool, nullptr);
+  for(int i = 0; i < MAX_IN_FLIGHT_FRAMES; ++i)
+    vkDestroyDescriptorPool(m_device, m_rtDescPool[i], nullptr);
   vkDestroyDescriptorSetLayout(m_device, m_rtDescSetLayout, nullptr);
   vkDestroyPipeline(m_device, m_rtPipeline, nullptr);
   vkDestroyPipelineLayout(m_device, m_rtPipelineLayout, nullptr);
@@ -154,7 +158,7 @@ void Raytracer::createBottomLevelAS(std::vector<ObjModel>& models, ImplInst& imp
                                      //| VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR);
 }
 
-void Raytracer::createTopLevelAS(std::vector<ObjInstance>& instances, ImplInst& implicitObj)
+void Raytracer::createTopLevelAS(std::vector<ObjInstance>& instances, ImplInst& implicitObj, bool update)
 {
   std::vector<VkAccelerationStructureInstanceKHR> tlas;
 
@@ -186,7 +190,9 @@ void Raytracer::createTopLevelAS(std::vector<ObjInstance>& instances, ImplInst& 
     tlas.emplace_back(rayInst);
   }
 
-  m_rtBuilder.buildTlas(tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR);
+  m_rtBuilder.buildTlas(tlas, 
+      VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR | VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR, 
+      update);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -198,16 +204,24 @@ void Raytracer::createRtDescriptorSet(const VkImageView& outputImage)
 
   m_rtDescSetLayoutBind.addBinding(RtxBindings::eTlas, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1,
                                    VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);  // TLAS
-  m_rtDescSetLayoutBind.addBinding(RtxBindings::eOutImage, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);  // Output image
+  m_rtDescSetLayoutBind.addBinding(RtxBindings::eOutImage, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1,
+                                   VK_SHADER_STAGE_RAYGEN_BIT_KHR);  // Output image
 
-  m_rtDescPool      = m_rtDescSetLayoutBind.createPool(m_device);
+  
   m_rtDescSetLayout = m_rtDescSetLayoutBind.createLayout(m_device);
 
-  VkDescriptorSetAllocateInfo allocateInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
-  allocateInfo.descriptorPool     = m_rtDescPool;
-  allocateInfo.descriptorSetCount = 1;
-  allocateInfo.pSetLayouts        = &m_rtDescSetLayout;
-  vkAllocateDescriptorSets(m_device, &allocateInfo, &m_rtDescSet);
+  m_rtDescPool.resize(MAX_IN_FLIGHT_FRAMES);
+  m_rtDescSet.resize(MAX_IN_FLIGHT_FRAMES);
+  for(int i = 0; i < MAX_IN_FLIGHT_FRAMES; ++i)
+  {
+    m_rtDescPool[i] = m_rtDescSetLayoutBind.createPool(m_device);
+
+    VkDescriptorSetAllocateInfo allocateInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
+    allocateInfo.descriptorPool     = m_rtDescPool[i];
+    allocateInfo.descriptorSetCount = 1;
+    allocateInfo.pSetLayouts        = &m_rtDescSetLayout;
+    vkAllocateDescriptorSets(m_device, &allocateInfo, &m_rtDescSet[i]);
+  }
 
   VkAccelerationStructureKHR                   tlas = m_rtBuilder.getAccelerationStructure();
   VkWriteDescriptorSetAccelerationStructureKHR descASInfo{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR};
@@ -219,11 +233,34 @@ void Raytracer::createRtDescriptorSet(const VkImageView& outputImage)
 
 
   std::vector<VkWriteDescriptorSet> writes;
-  writes.emplace_back(m_rtDescSetLayoutBind.makeWrite(m_rtDescSet, RtxBindings::eTlas, &descASInfo));
-  writes.emplace_back(m_rtDescSetLayoutBind.makeWrite(m_rtDescSet, RtxBindings::eOutImage, &imageInfo));
+  writes.emplace_back(m_rtDescSetLayoutBind.makeWrite(m_rtDescSet[0], RtxBindings::eTlas, &descASInfo));
+  writes.emplace_back(m_rtDescSetLayoutBind.makeWrite(m_rtDescSet[0], RtxBindings::eOutImage, &imageInfo));
   vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+
+  currFrameIdx = (currFrameIdx + 1) % MAX_IN_FLIGHT_FRAMES;
 }
 
+VkDescriptorSet Raytracer::GetCurrentRtDescSet()
+{
+  return m_rtDescSet[(currFrameIdx + MAX_IN_FLIGHT_FRAMES - 1) % MAX_IN_FLIGHT_FRAMES];
+}
+
+void Raytracer::updateRtDescriptorSetAccelStruct(const VkImageView& outputImage)
+{
+  VkAccelerationStructureKHR                   tlas = m_rtBuilder.getAccelerationStructure();
+  VkWriteDescriptorSetAccelerationStructureKHR descASInfo{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR};
+  descASInfo.accelerationStructureCount = 1;
+  descASInfo.pAccelerationStructures    = &tlas;
+
+  VkDescriptorImageInfo imageInfo{{}, outputImage, VK_IMAGE_LAYOUT_GENERAL};
+
+  std::vector<VkWriteDescriptorSet> writes;
+  writes.emplace_back(m_rtDescSetLayoutBind.makeWrite(m_rtDescSet[currFrameIdx], RtxBindings::eTlas, &descASInfo));
+  writes.emplace_back(m_rtDescSetLayoutBind.makeWrite(m_rtDescSet[currFrameIdx], RtxBindings::eOutImage, &imageInfo));
+  vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+
+  currFrameIdx = (currFrameIdx + 1) % MAX_IN_FLIGHT_FRAMES;
+}
 
 //--------------------------------------------------------------------------------------------------
 // Writes the output image to the descriptor set
@@ -232,7 +269,8 @@ void Raytracer::createRtDescriptorSet(const VkImageView& outputImage)
 void Raytracer::updateRtDescriptorSet(const VkImageView& outputImage)
 {
   VkDescriptorImageInfo imageInfo{{}, outputImage, VK_IMAGE_LAYOUT_GENERAL};
-  VkWriteDescriptorSet  wds = m_rtDescSetLayoutBind.makeWrite(m_rtDescSet, RtxBindings::eOutImage, &imageInfo);
+  VkWriteDescriptorSet  wds = m_rtDescSetLayoutBind.makeWrite(GetCurrentRtDescSet(),
+                                      RtxBindings::eOutImage, &imageInfo);
   vkUpdateDescriptorSets(m_device, 1, &wds, 0, nullptr);
 }
 
@@ -424,7 +462,7 @@ void Raytracer::raytrace(const VkCommandBuffer& cmdBuf,
   m_pcRay.frame                = sceneConstants.frame;
 
 
-  std::vector<VkDescriptorSet> descSets{m_rtDescSet, sceneDescSet};
+  std::vector<VkDescriptorSet> descSets{GetCurrentRtDescSet(), sceneDescSet};
   vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, m_rtPipeline);
   vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, m_rtPipelineLayout, 0,
                           (uint32_t)descSets.size(), descSets.data(), 0, nullptr);

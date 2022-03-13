@@ -53,6 +53,8 @@ hitAttributeEXT vec2 attribs;
 
 vec4 mapColormap (float value);
 
+#define RAYTRACEVLUME 0
+
 void main()
 {
 // Object data
@@ -62,9 +64,24 @@ void main()
   Indices    indices     = Indices(objResource.indexAddress);
   Vertices   vertices    = Vertices(objResource.vertexAddress);
   
+  
+#if !RAYTRACEVLUME
+  int               matIdx = matIndices.i[gl_PrimitiveID];
+  WaveFrontMaterial mat    = materials.m[matIdx];
+
+  if(mat.illum != 4)
+    return;
+
+  uint seed = prd.seed;  // We don't want to modify the PRD
+  if(mat.dissolve == 0.0)
+    ignoreIntersectionEXT;
+  else if(rnd(seed) > mat.dissolve)
+    ignoreIntersectionEXT;
+
+#endif // RAYTRACEVLUME
+#if RAYTRACEVLUME
   // Indices of the triangle
   ivec3 ind              = indices.i[gl_PrimitiveID];
-  
   // Hit Time
   float t                = gl_HitTEXT;
 
@@ -155,7 +172,7 @@ void main()
 #endif
      return;
   }
-  
+#endif // RAYTRACEVLUME
 }
 
 vec4 mapColormap (float value) {

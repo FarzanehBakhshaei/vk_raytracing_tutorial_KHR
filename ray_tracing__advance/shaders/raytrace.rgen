@@ -44,15 +44,17 @@ layout(set = 1, binding = eColormapTexture) uniform texture1D colormapTexture;
 layout(location = 3) callableDataEXT rayLight cLight;
 
 
-const int NBSAMPLES = 16;
+const int NBSAMPLES = 1;
 
 vec4 mapColormap (float value);
 vec3 calculateNormal (vec3 normalizedCoord);
 vec3 computeDiffuseLighting(vec3 normal);
 
-#define ENABLED_ISOVALUE 0
+#define ENABLED_ISOVALUE 1
 #define ENABLED_REFINEMENT 1
 #define ENABLED_DVR (1 && !ENABLED_ISOVALUE)
+
+vec4 planeColor;
 
 void main()
 {
@@ -63,10 +65,12 @@ void main()
     vec3 normal = vec3(0.f);
     prd.done                = 1;      
     prd.depth               = 0;
-    prd.hitValue            = vec4(0.f, 0.f,0.f ,0.f);
+    prd.hitValue            = vec4(0.f, 0.f, 0.f ,0.f);
     prd.attenuation         = vec4(1.f, 1.f, 1.f, 1.f);
     prd.lastT               = -1.f;
     prd.hitCount            = 0;
+
+    vec4 finalColor = vec4(0);
 
     for(int smpl = 0; smpl < NBSAMPLES; smpl++)
     {
@@ -74,7 +78,7 @@ void main()
         float r2 = rnd(seed);
         // Subpixel jitter: send the ray through a different position inside the pixel
         // each time, to provide antialiasing.
-        vec2 subpixel_jitter = vec2(0.5f, 0.5f);//pcRay.frame == 0 ? vec2(0.5f, 0.5f) : vec2(r1, r2);
+        vec2 subpixel_jitter = pcRay.frame == 0 ? vec2(0.5f, 0.5f) : vec2(r1, r2);
         
         const vec2 pixelCenter = vec2(gl_LaunchIDEXT.xy) + subpixel_jitter;
         
@@ -119,7 +123,7 @@ void main()
         
     //for(;;)
     //{
-#if 0
+//#if 0
         traceRayEXT(topLevelAS,     // acceleration structure
                     rayFlags,       // rayFlags
                     0xFF,           // cullMask
@@ -127,16 +131,17 @@ void main()
                     0,              // sbtRecordStride
                     0,              // missIndex
                     origin.xyz,     // ray origin
-                    tMin,           // ray min range
+                    0.001,           // ray min range
                     direction.xyz,  // ray direction
-                    tMax,           // ray max range
+                    10000.0,           // ray max range
                     0               // payload (location = 0)
         );
-#else
-            
+//#else
+          
+    
         vec4 hitValues = vec4 (0);//pcRay.clearColor.xyz * 0.8, 1.f);
-        
-        float tPlane = dot((ai.planePosition.xyz - origin.xyz), ai.planeNormal.xyz) / dot (ai.planeNormal.xyz, direction.xyz); // t (ray hits plane) = (P-O).N / N.D
+       
+        float tPlane = prd.tHit < 10000 ? prd.tHit : dot((ai.planePosition.xyz - origin.xyz), ai.planeNormal.xyz) / dot (ai.planeNormal.xyz, direction.xyz); // t (ray hits plane) = (P-O).N / N.D
         //tMax = min(tMax, tPlane);
         float planeSize = length(maxCorner - minCorner) * 1.5f;
         vec3 distanceToPlaneCenter = origin.xyz + tPlane * direction.xyz - ai.planePosition.xyz; // hit point distance to plane center
@@ -163,19 +168,29 @@ void main()
         if(exitPosProj > 0)
             tMax = min(tMax, tPlane);   // means tMax = tPlane
             
-        if(abs(length(distanceToPlaneCenter) - planeSize / 2) < 2) {
-            //ignoreRayTracing = true;
-            tMax = min(tMax, tPlane);
-            hitValues = vec4 (1.f, 0.f, 0.f, 0.f);
-        }
+//        if(abs(length(distanceToPlaneCenter) - planeSize / 2) < 2) {    // show plane border
+//            //ignoreRayTracing = true;
+//            tMax = min(tMax, tPlane);
+//            //hitValues = vec4 (1.f, 0.f, 0.f, 0.f);
+//        }
     
-        if(length(distanceToPlaneCenter) < 2 && dot(distanceToPlaneCenter, ai.planeNormal.xyz) == 0) { // show normal
+//        if(length(distanceToPlaneCenter) < 2 && dot(distanceToPlaneCenter, ai.planeNormal.xyz) == 0) { // show normal
+//            ignoreRayTracing = true;
+//            hitValues = vec4 (0.f, 0.f, 1.f, 0.f);
+//        }
+        if(prd.tHit < 10000 && prd.tHit > 0 && prd.tHit < tMax)
+        {
+            vec4 C = prd.hitValue;
+            float ain = hitValues.a;
+            vec3 Cin = hitValues.rgb;
+            hitValues.rgb = Cin + (1 - ain) * C.rgb;
+            hitValues.a = 1;
             ignoreRayTracing = true;
-            hitValues = vec4 (0.f, 0.f, 1.f, 0.f);
         }
+
+        bool doRayMarching = tMax > tMin && tMin > 0 && !ignoreRayTracing;
         
-        
-        if(tMax > tMin && tMin > 0 && !ignoreRayTracing) {
+        if(doRayMarching) {
             float stepSize = length(maxCorner - minCorner) / 400.f;//(tMax - tMin) / 100.f;
             float t = tMin;
             
@@ -188,23 +203,26 @@ void main()
                 if(attr >= ai.ISOValue) 
                 {                    
 #if ENABLED_REFINEMENT
-                    vec3 lastPos = origin.xyz + (t-stepSize) * direction.xyz;
-                    for (int i=0; i<10; i++) {
-                        vec3 midPos = (p + lastPos)/2.f;
-                        normalizedCoord = (midPos - ai.minPoint.xyz) / ai.dimension.xyz;
-                        attr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
-                        if(attr >= ai.ISOValue) {
-                            p = midPos;
-                        } else {
-                            lastPos = midPos;
+                    if(i > 0) {
+                        vec3 lastPos = origin.xyz + (t-stepSize) * direction.xyz;
+                        for (int i=0; i<10; i++) {
+                            vec3 midPos = (p + lastPos)/2.f;
+                            normalizedCoord = (midPos - ai.minPoint.xyz) / ai.dimension.xyz;
+                            attr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
+                            if(attr >= ai.ISOValue) {
+                                p = midPos;
+                            } else {
+                                lastPos = midPos;
+                            }
                         }
+                        normalizedCoord = (p - ai.minPoint.xyz) / ai.dimension.xyz;
+                        attr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
                     }
-                    normalizedCoord = (p - ai.minPoint.xyz) / ai.dimension.xyz;
-                    attr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
 #endif // endif ENABLED_REFINEMENT
                     normal = calculateNormal(normalizedCoord);
                
                     hitValues = mapColormap(attr);
+                    hitValues.a = 1;
                     break;
                 }
 #elif ENABLED_DVR
@@ -224,7 +242,16 @@ void main()
 #endif // endif ENABLED_ISOVALUE/ENABLED_DVR
             } // end of raycasting for
         } // end of !ignoreRayTracing if
-#endif // endif traceRayEXT
+//#endif // endif traceRayEXT
+
+        if(prd.tHit < 10000 && (prd.tHit > tMin || !doRayMarching))
+        {
+            vec4 C = prd.hitValue;;
+            float ain = hitValues.a;
+            vec3 Cin = hitValues.rgb;
+            hitValues.rgb = Cin + (1 - ain) * C.rgb;
+            hitValues.a = 1;
+        }
 
         // background color: clearColor
         vec4 C = vec4 (pcRay.clearColor.xyz * 0.8, 1.f);
@@ -234,9 +261,9 @@ void main()
         hitValues.rgb = Cin + (1 - ain) * C.rgb;
         hitValues.a = ain + (1 - ain);
         
-        prd.hitValue += hitValues;
+        finalColor += hitValues;
     }
-    prd.hitValue *= 1.f / NBSAMPLES;
+    finalColor *= 1.f / NBSAMPLES;
 
     
 
@@ -244,19 +271,19 @@ void main()
     // Diffuse
     vec3 diffuse = computeDiffuseLighting(normal);
     //
-    prd.hitValue = prd.hitValue * vec4(diffuse, 1.f);
+    finalColor = finalColor * vec4(diffuse, 1.f);
 #endif  
     // Do accumulation over time
     if(pcRay.frame >= 0)
     {
       float a         = 1.0f / float(pcRay.frame + 1);
       vec3  old_color = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
-      imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(mix(old_color, prd.hitValue.rgb, a), 1.f));
+      imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(mix(old_color, finalColor.rgb, a), 1.f));
     }
     else
     {
       // First frame, replace the value in the buffer
-      imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(prd.hitValue.rgb, 1.f));
+      imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(finalColor.rgb, 1.f));
     }    
 }
 

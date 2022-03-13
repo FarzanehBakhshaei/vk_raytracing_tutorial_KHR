@@ -183,7 +183,7 @@ void HelloVulkan::updateDescriptorSet()
   writes.emplace_back(m_descSetLayoutBind.makeWriteArray(m_descSet, SceneBindings::eTextures, diit.data()));
 
   // Attribues
-  VkDescriptorImageInfo dii{m_objModel[0].texture.descriptor};
+  VkDescriptorImageInfo dii{m_atrInfoTexture.descriptor};
   dii.sampler = VK_NULL_HANDLE;
   writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, SceneBindings::eAtrTexture, &dii));
 
@@ -321,8 +321,8 @@ void HelloVulkan::loadModel(const std::string& filename, nvmath::mat4f transform
 void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transform)
 {
   //return;
-  //SimVisDataPtr simVisPtr = SimVisData::loadFromFile(filePath);
-  SimVisDataPtr simVisPtr = SimVisData::loadSphere(32);
+  SimVisDataPtr simVisPtr = SimVisData::loadFromFile(filePath);
+  //SimVisDataPtr simVisPtr = SimVisData::loadSphere(32);
   std::vector<MaterialObj> materials(128, MaterialObj());
   std::vector<std::string> textures;
 
@@ -449,7 +449,7 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
   nvvk::Image image             = m_alloc.createImage(cmdBuf, bufferSize, simVisPtr->attributesList[0].data(), imageCreateInfo);
   VkImageViewCreateInfo ivInfo  = nvvk::makeImageViewCreateInfo(image.image, imageCreateInfo);
   model.texture = m_alloc.createTexture(image, ivInfo);
-  
+  m_atrInfoTexture              = model.texture;
   
   cmdBufGet.submitAndWait(cmdBuf);
   m_alloc.finalizeAndReleaseStaging();
@@ -465,7 +465,7 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
   ObjInstance instance;
   instance.transform = transform;
   instance.objIndex  = static_cast<uint32_t>(m_objModel.size());
-  m_instances.push_back(instance);
+  //m_instances.push_back(instance);
 
   // Creating information for device access
   ObjDesc desc;
@@ -476,7 +476,7 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
   desc.materialIndexAddress = nvvk::getBufferDeviceAddress(m_device, model.matIndexBuffer.buffer);
 
   // Keeping the obj host model and device description
-  m_objModel.emplace_back(model);
+  //m_objModel.emplace_back(model);
   m_objDesc.emplace_back(desc);
 
   m_atrInfo.dimension = vec4(numCellsX, numCellsY, numCellsZ, 1);
@@ -484,6 +484,9 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
   m_atrInfo.ISOValue  = 0.077f;
   m_atrInfo.minAtrValue = min;
   m_atrInfo.maxAtrValue = max;
+  m_center             = (m_atrInfo.dimension - m_atrInfo.minPoint)/2.f;
+  m_atrInfo.planeNormal = vec4(1.f, 0.f, 0.f, 0.f);
+  m_atrInfo.planePosition = m_center;
 }
 
 
@@ -760,9 +763,49 @@ void HelloVulkan::initOffscreen()
 void HelloVulkan::initRayTracing()
 {
   m_raytrace.createBottomLevelAS(m_objModel, m_implObjects);
-  m_raytrace.createTopLevelAS(m_instances, m_implObjects);
+  m_raytrace.createTopLevelAS(m_instances, m_implObjects, false);
   m_raytrace.createRtDescriptorSet(m_offscreen.colorTexture().descriptor.imageView);
   m_raytrace.createRtPipeline(m_descSetLayout);
+}
+
+nvmath::mat4f HelloVulkan::calculateTransform(vec3 N, vec3 P, float s)
+{
+  vec3          A = vec3(0.f, 1.f, 0.f);
+  nvmath::mat4f mat3;
+  if(nvmath::length(nvmath::cross(A, N)) < 0.001f)
+  {
+    A = vec3(0.f, 0.0f, 1.0f);
+  }
+
+  vec3 X = nvmath::cross(N, A);
+  vec3 Y = nvmath::cross(N, X);
+  vec3 Z = N;
+
+  X = nvmath::normalize(X);
+  Y = nvmath::normalize(Y);
+  Z = nvmath::normalize(Z);
+
+  nvmath::mat4f mat0;
+  mat0.identity();
+  mat0.rotate(3.14159265f / 2.0f, nvmath::vec3f(1, 0, 0));
+
+  nvmath::mat4f mat1;
+  mat1.identity();
+  mat1.translate(P);
+
+
+  nvmath::mat4f mat2 = nvmath::mat4f(X.x, Y.x, Z.x, 0,
+                                     X.y, Y.y, Z.y, 0,
+                                     X.z, Y.z, Z.z, 0,
+                                     0, 0, 0, 1);
+  mat2 = nvmath::transpose(mat2);
+  //nvmath::mat4f mat2 = nvmath::mat4f(X.x, X.y, X.z, 0, Y.x, Y.y, Y.z, 0, Z.x, Z.y, Z.z, 0, 0, 0, 0, 1);
+  nvmath::mat4f scale;
+  scale.identity();
+  scale.scale(s);
+
+  mat3 = mat1 * mat2 *  scale * mat0;
+  return mat3;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -773,6 +816,20 @@ void HelloVulkan::raytrace(const VkCommandBuffer& cmdBuf, const nvmath::vec4f& c
   updateFrame();
   //if(m_pcRaster.frame >= m_maxFrames)
   //  return;
+
+  nvmath::mat4f transform = calculateTransform(
+      vec3(m_atrInfo.planeNormal.x, m_atrInfo.planeNormal.y, m_atrInfo.planeNormal.z),
+      vec3(m_atrInfo.planePosition.x, m_atrInfo.planePosition.y, m_atrInfo.planePosition.z), 15);
+  
+  nvmath::mat4f transformNormal = calculateTransform(
+      vec3(m_atrInfo.planeNormal.x, m_atrInfo.planeNormal.y, m_atrInfo.planeNormal.z),
+      vec3(m_atrInfo.planePosition.x, m_atrInfo.planePosition.y, m_atrInfo.planePosition.z), 20);
+
+  m_instances[0].transform = transform;
+  m_instances[1].transform = transformNormal;
+
+  m_raytrace.createTopLevelAS(m_instances, m_implObjects, true);
+  m_raytrace.updateRtDescriptorSetAccelStruct(m_offscreen.colorTexture().descriptor.imageView);
 
   m_raytrace.raytrace(cmdBuf, clearColor, m_descSet, m_size, m_pcRaster);
 }

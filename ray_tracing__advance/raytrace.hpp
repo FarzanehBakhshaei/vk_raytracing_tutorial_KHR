@@ -35,8 +35,9 @@ public:
   auto objectToVkGeometryKHR(const ObjModel& model);
   auto implicitToVkGeometryKHR(const ImplInst& implicitObj);
   void createBottomLevelAS(std::vector<ObjModel>& models, ImplInst& implicitObj);
-  void createTopLevelAS(std::vector<ObjInstance>& instances, ImplInst& implicitObj);
+  void createTopLevelAS(std::vector<ObjInstance>& instances, ImplInst& implicitObj, bool update);
   void createRtDescriptorSet(const VkImageView& outputImage);
+  void updateRtDescriptorSetAccelStruct(const VkImageView& outputImage); 
   void updateRtDescriptorSet(const VkImageView& outputImage);
   void createRtPipeline(VkDescriptorSetLayout& sceneDescLayout);
   void raytrace(const VkCommandBuffer& cmdBuf,
@@ -56,14 +57,15 @@ private:
   VkPhysicalDeviceRayTracingPipelinePropertiesKHR m_rtProperties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR};
   nvvk::RaytracingBuilderKHR                      m_rtBuilder;
   nvvk::DescriptorSetBindings                     m_rtDescSetLayoutBind;
-  VkDescriptorPool                                m_rtDescPool;
+  std::vector<VkDescriptorPool>                   m_rtDescPool;
   VkDescriptorSetLayout                           m_rtDescSetLayout;
-  VkDescriptorSet                                 m_rtDescSet;
+  std::vector<VkDescriptorSet>                      m_rtDescSet;
   std::vector<VkRayTracingShaderGroupCreateInfoKHR> m_rtShaderGroups;
   VkPipelineLayout                                  m_rtPipelineLayout;
   VkPipeline                                        m_rtPipeline;
   nvvk::Buffer                                      m_rtSBTBuffer;
 
+  VkDescriptorSet GetCurrentRtDescSet();
 
   PushConstantRay m_pcRay{};
 };

@@ -99,6 +99,9 @@ public:
   std::vector<ObjDesc>     m_objDesc;    // Model description for device access
   std::vector<ObjInstance> m_instances;  // Scene model instances
   AtrInfo     m_atrInfo;
+  vec4                     m_center;    // center of geometry
+
+  nvmath::mat4f calculateTransform(vec3 N, vec3 P, float scale);
 
   // Graphic pipeline
   VkPipelineLayout            m_pipelineLayout;
@@ -118,6 +121,7 @@ public:
 
   std::vector<nvvk::Texture> m_textures;  // vector of all textures of the scene
   nvvk::Texture              m_colormapTexture;
+  nvvk::Texture              m_atrInfoTexture;  // to save the model texture in loadVlumetricData(). I want to dont emplace_back the model to m_objModel, but I need the texture to use inupdateDescriptorSet()
 
   Allocator       m_alloc;  // Allocator for buffer, images, acceleration structures
   nvvk::DebugUtil m_debug;  // Utility to name objects
