@@ -87,6 +87,8 @@ struct AtrInfo
   vec4  planePosition;
   vec4  minPoint;
   vec4  dimension;
+  int   useAmbinetOcclusion[4];
+  vec4  randomDirections[128];
 };
 
 // Push constant structure for the raster

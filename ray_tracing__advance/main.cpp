@@ -109,6 +109,10 @@ void renderUI(HelloVulkan& helloVk)
   
   //ISOValue
   changed |= ImGui::SliderFloat("ISOValue", &helloVk.m_atrInfo.ISOValue, 0.0f, 2.0f);
+
+  static bool useAmbinetOcclusion;
+  changed |= ImGui::Checkbox("Ambient Occlusion", &useAmbinetOcclusion);
+  helloVk.m_atrInfo.useAmbinetOcclusion[0] = useAmbinetOcclusion ? 1 : 0;
   
   vgm::Vec3 dir(helloVk.m_atrInfo.planeNormal.x, helloVk.m_atrInfo.planeNormal.y, helloVk.m_atrInfo.planeNormal.z);
   changed |= ImGui::gizmo3D("Plane Normal", dir, 100, imguiGizmo::modeDirPlane);
@@ -124,7 +128,7 @@ void renderUI(HelloVulkan& helloVk)
   helloVk.m_atrInfo.planePosition.y = pos.y;
   helloVk.m_atrInfo.planePosition.z = pos.z;
 
-  static bool refineAnyHit;
+  static bool refineAnyHit = true;
   changed |= ImGui::Checkbox("Refine Any-Hit", &refineAnyHit);
   helloVk.m_atrInfo.refineAnyHit = refineAnyHit ? 1 : 0;
 

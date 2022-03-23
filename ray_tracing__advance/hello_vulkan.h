@@ -77,7 +77,8 @@ public:
   void loadVolumetricData(const char* filePath, nvmath::mat4f transform = nvmath::mat4f(1)); // mat4f(1) is identity
   void createColormap();
   void updateColormap(const VkCommandBuffer& cmdBuff, std::vector<uint8_t> colormap);
-
+  void HelloVulkan::fillRandomDirections();
+ 
   Offscreen& offscreen() { return m_offscreen; }
   Raytracer& raytracer() { return m_raytrace; }
 

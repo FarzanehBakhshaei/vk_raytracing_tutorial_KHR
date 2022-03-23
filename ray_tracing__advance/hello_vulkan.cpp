@@ -19,6 +19,7 @@
 
 
 #include <sstream>
+#include <random>
 
 
 #define VMA_IMPLEMENTATION
@@ -56,6 +57,30 @@ void HelloVulkan::setup(const VkInstance& instance, const VkDevice& device, cons
 
   m_offscreen.setup(device, physicalDevice, &m_alloc, queueFamily);
   m_raytrace.setup(device, physicalDevice, &m_alloc, queueFamily);
+}
+
+vec3 randomDirectionOnHemisphere() {
+  float x, y, z;
+  static std::default_random_engine             generator;
+  static std::uniform_real_distribution<float> distributionXY(-1.f, 1.f);
+  static std::uniform_real_distribution<float> distributionZ(0.f, 1.f);
+
+  do
+  {
+    x = distributionXY(generator);
+    y = distributionXY(generator);
+    z = distributionZ(generator);
+  } while((x*x + y*y + z*z) > 1.f);
+
+  return nvmath::normalize(vec4(x, y, z, 0.f)); // to map the (x, y, z) on the hemisphere, normalize it. Then we have: (x*x + y*y + z*z) == 1.f 
+}
+
+void HelloVulkan::fillRandomDirections() {
+  int size = sizeof(m_atrInfo.randomDirections) / sizeof(m_atrInfo.randomDirections[0]);
+  for(int i = 0; i < size; ++i)
+  {
+    m_atrInfo.randomDirections[i] = randomDirectionOnHemisphere();
+  }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -105,6 +130,7 @@ void HelloVulkan::updateUniformBuffer(const VkCommandBuffer& cmdBuf)
   vkCmdPipelineBarrier(cmdBuf, VK_PIPELINE_STAGE_TRANSFER_BIT, uboUsageStages, VK_DEPENDENCY_DEVICE_GROUP_BIT, 0,
                        nullptr, 1, &afterBarrier, 0, nullptr);
 }
+
 
 //--------------------------------------------------------------------------------------------------
 // Describing the layout pushed when rendering
@@ -422,6 +448,10 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
   samplerCreateInfo.anisotropyEnable = VK_TRUE;
   samplerCreateInfo.maxAnisotropy    = 16;
   samplerCreateInfo.unnormalizedCoordinates = VK_FALSE;
+  samplerCreateInfo.addressModeU            = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+  samplerCreateInfo.addressModeV            = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+  samplerCreateInfo.addressModeW            = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+  samplerCreateInfo.borderColor             = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
 
   // create linear sampler
   if(vkCreateSampler(m_device, &samplerCreateInfo, nullptr, &m_linearSampler) != VK_SUCCESS)
@@ -487,6 +517,7 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
   m_center             = (m_atrInfo.dimension - m_atrInfo.minPoint)/2.f;
   m_atrInfo.planeNormal = vec4(1.f, 0.f, 0.f, 0.f);
   m_atrInfo.planePosition = m_center;
+  fillRandomDirections();   // to initiate m_atrInfo.randomDirections
 }
 
 
