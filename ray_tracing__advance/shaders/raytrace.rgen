@@ -48,7 +48,7 @@ const int NBSAMPLES = 1;
 
 vec4 mapColormap (float value);
 vec3 calculateNormal (vec3 normalizedCoord);
-vec3 computeDiffuseLighting(vec3 normal);
+vec3 computeDiffuseLighting(vec3 normal, vec3 cameraPosition, vec3 worldPosition);
 mat3 calculateTransform(vec3 N);
 void render3dUIObjects(vec3 rayOrigin, vec3 rayDirection);
 vec3 refineISOSurface(vec3 rayOrigin, vec3 rayDirection, float stepSize, vec3 p, float t);
@@ -251,25 +251,21 @@ void main()
                             normalizedCoord = (p0 - ai.minPoint.xyz) / ai.dimension.xyz;
                             float atr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
                                                             
-                            //vec3 diffuse = computeDiffuseLighting(normal);
-                            // map colormap
                             // Front-to-back strategy
-                            //vec4 C = ; // C
                             float a = mapColormap(atr).a;
-                            //float ain = collectedOcclusion;
-                                                           
+                                                                                      
                             collectedOcclusion = collectedOcclusion + (1 - collectedOcclusion) * a;
 
                             if(collectedOcclusion >= .95f) {
                                 break;
                             }
                         }
-                        ao += collectedOcclusion; // ?
+                        ao += collectedOcclusion; 
                     }
                     ao /= aoSampleCount; // non occluded
                 }
                 // ray tace
-                vec3 diffuse = computeDiffuseLighting(normal);
+                vec3 diffuse = computeDiffuseLighting(normal, origin.xyz, p);
                 
                 vec3 ambientColor = vec3(1.f);
                 float diffuseMultiplier = 0.9;
@@ -320,7 +316,7 @@ void main()
 
 #if !ENABLED_DVR
     // Diffuse
-    vec3 diffuse = computeDiffuseLighting(normal);
+    vec3 diffuse = computeDiffuseLighting(normal, origin, p);
     //
     vec3 ambientColor = vec3(0.05, 0.05, 0.05);
     float diffuseMultiplier = 0.9;
@@ -372,7 +368,7 @@ vec3 calculateNormal (vec3 normalizedCoord) {
     return normal;
 }
 
-vec3 computeDiffuseLighting(vec3 normal) {
+vec3 computeDiffuseLighting(vec3 normal, vec3 cameraPosition, vec3 worldPosition) {
     // Point light
     if(pcRay.lightType == 0)
     {
@@ -399,6 +395,10 @@ vec3 computeDiffuseLighting(vec3 normal) {
       cLight.outIntensity     = 1.0;
       cLight.outLightDistance = 10000000;
     }
+
+    // headlight
+    cLight.outLightDir      = normalize(cameraPosition - worldPosition);
+
     // Diffuse
     vec3 diffuse = length (normal) < 0.001 ? vec3(1.f) : computeDiffuse(cLight.outLightDir, normal);
     

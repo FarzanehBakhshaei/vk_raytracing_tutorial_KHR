@@ -81,7 +81,14 @@ public:
     void update_gpu_image(VkCommandBuffer cmdBuff, Allocator* alloc);
 
     VkImage texture;
-
+    void    setKittenAlpha_control_pts()
+    {
+      alpha_control_pts = {vec2f(0.f),          vec2f(0.17f, 0.56f),  vec2f(0.52f, 0.74f),
+                           vec2f(0.71f, 0.37f), vec2f(0.89f, 0.76f),  vec2f(1.0f, 0.f)
+      };
+      selected_colormap = 1;
+      update_colormap();
+    }
   private:
     
 

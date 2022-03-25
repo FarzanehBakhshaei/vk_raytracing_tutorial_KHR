@@ -233,10 +233,10 @@ int main(int argc, char** argv)
   helloVk.m_atrInfo.planePosition.z = 100;*/
 
   
-
+  bool kitten = false;
   // Creation of the example
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData1_snapshot.dat", defaultSearchPaths, true).c_str());
-  helloVk.loadVolumetricData(nvh::findFile("media/scenes/kitten_132_115_200_its500.dat", defaultSearchPaths, true).c_str());
+  helloVk.loadVolumetricData(nvh::findFile("media/scenes/kitten_132_115_200_its500.dat", defaultSearchPaths, true).c_str());kitten = true;
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData.dat", defaultSearchPaths, true).c_str());
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/femur3D_144_96_184_A_its400.dat", defaultSearchPaths, true).c_str());
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/cantilever3D_256_128_128_iLoad3_R20_its500.dat", defaultSearchPaths, true).c_str());
@@ -298,7 +298,10 @@ int main(int argc, char** argv)
   tfnw::TransferFunctionWidget tfn_widget;
   //tfn_widget.add_colormap(tfnw::Colormap("fary", std::vector<uint8_t>(tfnw::rainbow2, tfnw::rainbow2 + sizeof(tfnw::rainbow2)),
    //                                      tfnw::ColorSpace::LINEAR));
-
+  if(kitten)
+  {
+    tfn_widget.setKittenAlpha_control_pts();
+  }
   helloVk.initOffscreen();
   Offscreen& offscreen = helloVk.offscreen();
 
