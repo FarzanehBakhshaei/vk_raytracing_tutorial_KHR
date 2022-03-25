@@ -199,7 +199,7 @@ void main()
   //********************refine hit with ray marching***********************
     vec3 debug_color = vec3(0, 1, 0);
 #if 0
-    if(ai.refineAnyHit != 0) {
+    if(ai.enableRefinement != 0) {
       debug_color = vec3(0);
       vec3 rayDirInv = normalize(-gl_WorldRayDirectionEXT);
       float stepSize =  2.0f;//min(1.0f/ai.dimension.x, min(1.0f/ai.dimension.y, 1.0f/ai.dimension.z));

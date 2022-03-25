@@ -80,7 +80,7 @@ struct GlobalUniforms
 
 struct AtrInfo
 {
-  int   refineAnyHit;
+  int   enableRefinement;
   float ISOValue;
   float minAtrValue, maxAtrValue;
   vec4  planeNormal;

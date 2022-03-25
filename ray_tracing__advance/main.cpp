@@ -128,9 +128,9 @@ void renderUI(HelloVulkan& helloVk)
   helloVk.m_atrInfo.planePosition.y = pos.y;
   helloVk.m_atrInfo.planePosition.z = pos.z;
 
-  static bool refineAnyHit = true;
-  changed |= ImGui::Checkbox("Refine Any-Hit", &refineAnyHit);
-  helloVk.m_atrInfo.refineAnyHit = refineAnyHit ? 1 : 0;
+  static bool enableRefinement = true;
+  changed |= ImGui::Checkbox("Enable Refinement", &enableRefinement);
+  helloVk.m_atrInfo.enableRefinement = enableRefinement ? 1 : 0;
 
   changed |= ImGui::SliderInt("Max Frames", &helloVk.m_maxFrames, 1, 1000);
   if(changed)
@@ -235,8 +235,8 @@ int main(int argc, char** argv)
   
 
   // Creation of the example
-  helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData1_snapshot.dat", defaultSearchPaths, true).c_str());
-  //helloVk.loadVolumetricData(nvh::findFile("media/scenes/kitten_132_115_200_its500.dat", defaultSearchPaths, true).c_str());
+  //helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData1_snapshot.dat", defaultSearchPaths, true).c_str());
+  helloVk.loadVolumetricData(nvh::findFile("media/scenes/kitten_132_115_200_its500.dat", defaultSearchPaths, true).c_str());
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData.dat", defaultSearchPaths, true).c_str());
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/femur3D_144_96_184_A_its400.dat", defaultSearchPaths, true).c_str());
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/cantilever3D_256_128_128_iLoad3_R20_its500.dat", defaultSearchPaths, true).c_str());

@@ -50,12 +50,13 @@ vec4 mapColormap (float value);
 vec3 calculateNormal (vec3 normalizedCoord);
 vec3 computeDiffuseLighting(vec3 normal);
 mat3 calculateTransform(vec3 N);
+void render3dUIObjects(vec3 rayOrigin, vec3 rayDirection);
+vec3 refineISOSurface(vec3 rayOrigin, vec3 rayDirection, float stepSize, vec3 p, float t);
 
-#define ENABLED_ISOVALUE                      1
-#define ENABLED_REFINEMENT         (1 && ENABLED_ISOVALUE)
+#define ENABLED_ISOVALUE                      0
+//#define ENABLED_REFINEMENT         (1 && ENABLED_ISOVALUE)
 #define ENABLED_DVR                (1 && !ENABLED_ISOVALUE)
 
-#define ENABLED_AMBIENT_OCCLUSION             1
 #define ENABLED_DEBUG_AMBIENT_OCCLUSION       0
 
 
@@ -84,27 +85,26 @@ void main()
         float r2 = rnd(seed);
         // Subpixel jitter: send the ray through a different position inside the pixel
         // each time, to provide antialiasing.
-        vec2 subpixel_jitter = pcRay.frame == 0 ? vec2(0.5f, 0.5f) : vec2(r1, r2);
+        vec2 subpixel_jitter    = pcRay.frame == 0 ? vec2(0.5f, 0.5f) : vec2(r1, r2);        
+        const vec2 pixelCenter  = vec2(gl_LaunchIDEXT.xy) + subpixel_jitter;        
+        const vec2 inUV         = pixelCenter / vec2(gl_LaunchSizeEXT.xy);
+        vec2       d            = inUV * 2.0 - 1.0;
         
-        const vec2 pixelCenter = vec2(gl_LaunchIDEXT.xy) + subpixel_jitter;
+        vec4 origin             = uni.viewInverse * vec4(0, 0, 0, 1);
+        vec4 target             = uni.projInverse * vec4(d.x, d.y, 1, 1);
+        vec4 direction          = uni.viewInverse * vec4(normalize(target.xyz), 0);
         
-        
-        const vec2 inUV = pixelCenter / vec2(gl_LaunchSizeEXT.xy);
-        vec2       d    = inUV * 2.0 - 1.0;
-        
-        vec4 origin    = uni.viewInverse * vec4(0, 0, 0, 1);
-        vec4 target    = uni.projInverse * vec4(d.x, d.y, 1, 1);
-        vec4 direction = uni.viewInverse * vec4(normalize(target.xyz), 0);
-        
-        uint  rayFlags = gl_RayFlagsNoOpaqueEXT;
         prd.rayOrigin           = origin.xyz;
         prd.rayDir              = direction.xyz;
-//    float tMin     = 0.001;
-//    float tMax     = 10000.0;
+
+//#if 0
+        render3dUIObjects(origin.xyz, direction.xyz);
+//
 
         vec3 minCorner = ai.minPoint.xyz;
         vec3 maxCorner = ai.minPoint.xyz + ai.dimension.xyz;
         
+        // in which box side the ray from the origin enters and at which side exits
         vec3 s1, s2;
         vec3 n1 = vec3(-1.f, 0.f,  0.f);
         vec3 n2 = vec3( 0.f, -1.f,  0.f);
@@ -126,24 +126,8 @@ void main()
     
         float tMin = max(t1, max(t2, t3));
         float tMax = min(t4, min(t5, t6));
-        
-    //for(;;)
-    //{
-//#if 0
-        traceRayEXT(topLevelAS,     // acceleration structure
-                    rayFlags,       // rayFlags
-                    0xFF,           // cullMask
-                    0,              // sbtRecordOffset
-                    0,              // sbtRecordStride
-                    0,              // missIndex
-                    origin.xyz,     // ray origin
-                    0.001,           // ray min range
-                    direction.xyz,  // ray direction
-                    10000.0,           // ray max range
-                    0               // payload (location = 0)
-        );
-//#else
-          
+       
+         
     
         vec4 hitValues = vec4 (0);//pcRay.clearColor.xyz * 0.8, 1.f);
         float ao = 0.f;
@@ -209,29 +193,14 @@ void main()
 #if ENABLED_ISOVALUE
                 if(attr >= ai.ISOValue) 
                 {                    
-#if ENABLED_REFINEMENT
-                    if(ai.refineAnyHit != 0) {
+                    if(ai.enableRefinement == 1) {
                         if(i > 0) {
-                            vec3 lastPos = origin.xyz + (t-stepSize) * direction.xyz;
-                            for (int j=0; j<10; j++) {
-                                vec3 midPos = (p + lastPos)/2.f;
-                                normalizedCoord = (midPos - ai.minPoint.xyz) / ai.dimension.xyz;
-                                attr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
-                                if(attr >= ai.ISOValue) {
-                                    p = midPos;
-                                } else {
-                                    lastPos = midPos;
-                                }
-                            }
-                            normalizedCoord = (p - ai.minPoint.xyz) / ai.dimension.xyz;
+                            normalizedCoord = refineISOSurface(origin.xyz, direction.xyz, stepSize, p, t);
                             attr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
                         }
                     }
-#endif // endif ENABLED_REFINEMENT
-
                     normal = calculateNormal(normalizedCoord);
 
-#if ENABLED_AMBIENT_OCCLUSION
                     if(ai.useAmbinetOcclusion[0] != 0)
                     {
                         mat3 tangentSpaceTransformation = calculateTransform(normal);   // normal space transformation
@@ -239,13 +208,13 @@ void main()
                         const int aoSampleCount = 16;
 
                         for(int d=0; d<aoSampleCount; ++d) {
-                            vec3 dir = normalize(tangentSpaceTransformation * ai.randomDirections[d].xyz);
+                            vec3 dir = normalize(tangentSpaceTransformation * ai.randomDirections[d].xyz); // bring directions from world space to tanget space
                             if(false && dot(dir, normal) < 0) {
                                 dir = -dir;
                             }
                             
                             for(int s=2; s<10; ++s) {   // s = 2: to avoid self intersections
-                                vec3 p0 = p + dir * s * stepSize;       // ?
+                                vec3 p0 = p + dir * s * stepSize;       // 
                                 normalizedCoord = (p0 - ai.minPoint.xyz) / ai.dimension.xyz;
                                 float a = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
                                 if(a >= ai.ISOValue) {       // occoluded
@@ -253,24 +222,65 @@ void main()
                                     break;
                                 }
                             }
-                       }
-
-                       ao /= aoSampleCount; // non occuluded
+                        }
+                        ao /= aoSampleCount; // non occuluded
                     }
-#endif // ENABLED_AMBIENT_OCCLUSION
                              
                     hitValues = mapColormap(attr);
                     break;
                 }
 
-
-
 #elif ENABLED_DVR
                 normal = calculateNormal(normalizedCoord);
+                
+                if(ai.useAmbinetOcclusion[0] != 0)
+                {
+                    mat3 tangentSpaceTransformation = calculateTransform(normal);   // normal space transformation
+
+                    const int aoSampleCount = 16;
+
+                    for(int d=0; d<aoSampleCount; ++d) {
+                        vec3 dir = normalize(tangentSpaceTransformation * ai.randomDirections[d].xyz); // bring directions from world space to tanget space
+                        if(false && dot(dir, normal) < 0) {
+                            dir = -dir;
+                        }
+                        float collectedOcclusion = 0.f;
+                        for(int s=2; s<10; ++s) {   // s = 2: to avoid self intersections
+                            vec3 p0 = p + dir * s * stepSize;       // 
+                            
+                            normalizedCoord = (p0 - ai.minPoint.xyz) / ai.dimension.xyz;
+                            float atr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
+                                                            
+                            //vec3 diffuse = computeDiffuseLighting(normal);
+                            // map colormap
+                            // Front-to-back strategy
+                            //vec4 C = ; // C
+                            float a = mapColormap(atr).a;
+                            //float ain = collectedOcclusion;
+                                                           
+                            collectedOcclusion = collectedOcclusion + (1 - collectedOcclusion) * a;
+
+                            if(collectedOcclusion >= .95f) {
+                                break;
+                            }
+                        }
+                        ao += collectedOcclusion; // ?
+                    }
+                    ao /= aoSampleCount; // non occluded
+                }
+                // ray tace
                 vec3 diffuse = computeDiffuseLighting(normal);
+                
+                vec3 ambientColor = vec3(1.f);
+                float diffuseMultiplier = 0.9;
+                float ambientMultiplier = 1.f;
+
+                diffuse *= diffuseMultiplier;
+                ambientColor *= ambientMultiplier; 
+                diffuse += (1-ao) * ambientColor;
                 // map colormap
                 // Front-to-back strategy
-                vec4 C = mapColormap(attr) * vec4(diffuse, 1.f); // Cin
+                vec4 C = mapColormap(attr) * vec4(diffuse, 1.f); // C
                 float a = C.a;
                 float ain = hitValues.a;
                 vec3 Cin = hitValues.rgb;
@@ -282,7 +292,6 @@ void main()
 #endif // endif ENABLED_ISOVALUE/ENABLED_DVR
             } // end of raycasting for
         } // end of !ignoreRayTracing if
-//#endif // endif traceRayEXT
 
         if(prd.tHit < 10000 && (prd.tHit > tMin || !doRayMarching))
         {
@@ -320,7 +329,7 @@ void main()
     diffuse *= diffuseMultiplier;
     ambientColor *= ambientMultiplier; 
 
-    finalColor = vec4(finalAO * ambientColor, 0) + finalColor * vec4(diffuse, 1.f);
+    finalColor = vec4((1-finalAO) * ambientColor, 0) + finalColor * vec4(diffuse, 1.f);
 #if ENABLED_DEBUG_AMBIENT_OCCLUSION
     finalColor = vec4(finalAO, finalAO, finalAO, 1);
 #endif
@@ -436,4 +445,37 @@ mat3 calculateTransform(vec3 N)
 
   //mat4 m3 = m2 ;
   return m2;
+}
+
+void render3dUIObjects(vec3 rayOrigin, vec3 rayDirection) {
+    uint  rayFlags = gl_RayFlagsNoOpaqueEXT;
+    float tMin     = 0.001;
+    float tMax     = 10000.0;
+    traceRayEXT(topLevelAS,     // acceleration structure
+                rayFlags,       // rayFlags
+                0xFF,           // cullMask
+                0,              // sbtRecordOffset
+                0,              // sbtRecordStride
+                0,              // missIndex
+                rayOrigin,     // ray origin
+                tMin,          // ray min range
+                rayDirection,  // ray direction
+                tMax,        // ray max range
+                0               // payload (location = 0)
+        );
+}
+
+vec3 refineISOSurface(vec3 rayOrigin, vec3 rayDirection, float stepSize, vec3 p, float t) {
+    vec3 lastPos = rayOrigin + (t-stepSize) * rayDirection;
+    for (int j=0; j<10; j++) {
+        vec3 midPos = (p + lastPos)/2.f;
+        vec3 normalizedCoord = (midPos - ai.minPoint.xyz) / ai.dimension.xyz;
+        float attr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
+        if(attr >= ai.ISOValue) {
+            p = midPos;
+        } else {
+            lastPos = midPos;
+        }
+    }
+    return (p - ai.minPoint.xyz) / ai.dimension.xyz;
 }
