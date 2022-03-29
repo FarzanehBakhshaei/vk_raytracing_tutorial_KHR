@@ -79,7 +79,7 @@ void renderUI(HelloVulkan& helloVk)
     changed |= ImGui::RadioButton("Spot", &pc.lightType, 1);
     ImGui::SameLine();
     changed |= ImGui::RadioButton("Infinite", &pc.lightType, 2);
-
+    
 
     if(pc.lightType < 2)
     {
@@ -93,6 +93,7 @@ void renderUI(HelloVulkan& helloVk)
     {
       changed |= ImGui::SliderFloat("Light Intensity", &pc.lightIntensity, 0.f, 500.f);
     }
+
     if(pc.lightType == 1)
     {
       float dCutoff    = rad2deg(acos(pc.lightSpotCutoff));
@@ -113,7 +114,12 @@ void renderUI(HelloVulkan& helloVk)
   static bool useAmbinetOcclusion;
   changed |= ImGui::Checkbox("Ambient Occlusion", &useAmbinetOcclusion);
   helloVk.m_atrInfo.useAmbinetOcclusion[0] = useAmbinetOcclusion ? 1 : 0;
-  
+  static float color[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+  changed |= ImGui::ColorEdit3("AO color", reinterpret_cast<float*>(&color));
+  helloVk.m_atrInfo.ambientColor = {color[0], color[1], color[2], color[3]};
+
+  //changed |=  ImGui::ColorEdit3("color", color);
+
   vgm::Vec3 dir(helloVk.m_atrInfo.planeNormal.x, helloVk.m_atrInfo.planeNormal.y, helloVk.m_atrInfo.planeNormal.z);
   changed |= ImGui::gizmo3D("Plane Normal", dir, 100, imguiGizmo::modeDirPlane);
   helloVk.m_atrInfo.planeNormal.x = dir.x;
@@ -347,7 +353,7 @@ int main(int argc, char** argv)
       ImGuiH::Panel::Begin();
       bool changed = false;
       // Edit 3 floats representing a color
-      changed |= ImGui::ColorEdit3("Clear color", reinterpret_cast<float*>(&clearColor));
+      changed |= ImGui::ColorEdit3("Background color", reinterpret_cast<float*>(&clearColor));
       // Switch between raster and ray tracing
       changed |= ImGui::Checkbox("Ray Tracer mode", &useRaytracer);
       if(changed)

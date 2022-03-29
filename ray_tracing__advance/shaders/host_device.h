@@ -89,6 +89,7 @@ struct AtrInfo
   vec4  dimension;
   int   useAmbinetOcclusion[4];
   vec4  randomDirections[128];
+  vec4  ambientColor;
 };
 
 // Push constant structure for the raster
