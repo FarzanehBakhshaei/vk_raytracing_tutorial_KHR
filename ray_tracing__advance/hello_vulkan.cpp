@@ -509,14 +509,15 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
   //m_objModel.emplace_back(model);
   m_objDesc.emplace_back(desc);
 
-  m_atrInfo.dimension = vec4(numCellsX, numCellsY, numCellsZ, 1);
-  m_atrInfo.minPoint  = vec4(0, 0, 0, 1);
-  m_atrInfo.ISOValue  = 0.077f;
-  m_atrInfo.minAtrValue = min;
-  m_atrInfo.maxAtrValue = max;
-  m_center             = (m_atrInfo.dimension - m_atrInfo.minPoint)/2.f;
-  m_atrInfo.planeNormal = vec4(1.f, 0.f, 0.f, 0.f);
-  m_atrInfo.planePosition = m_center;
+  m_atrInfo.dimension       = vec4(numCellsX, numCellsY, numCellsZ, 1);
+  m_atrInfo.minPoint        = vec4(0, 0, 0, 1);
+  m_atrInfo.ISOValue        = 0.077f;
+  m_atrInfo.stepSize        = 0.5f;
+  m_atrInfo.minAtrValue     = min;
+  m_atrInfo.maxAtrValue     = max;
+  m_center                  = (m_atrInfo.dimension - m_atrInfo.minPoint)/2.f;
+  m_atrInfo.planeNormal     = vec4(1.f, 0.f, 0.f, 0.f);
+  m_atrInfo.planePosition   = m_center;
   fillRandomDirections();   // to initiate m_atrInfo.randomDirections
 }
 
@@ -724,9 +725,12 @@ void HelloVulkan::destroyResources()
     m_alloc.destroy(t);
   }
 
+  m_alloc.destroy(m_colormapTexture);
+  m_alloc.destroy(m_atrInfoTexture);
+
   //#Post
   m_offscreen.destroy();
-
+    
   // #VKRay
   m_raytrace.destroy();
 

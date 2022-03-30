@@ -70,7 +70,7 @@ void renderUI(HelloVulkan& helloVk)
   bool changed = false;
 
   changed |= ImGuiH::CameraWidget();
-  if(ImGui::CollapsingHeader("Light"))
+  /*if(ImGui::CollapsingHeader("Light"))
   {
     auto& pc = helloVk.m_pcRaster;
 
@@ -105,21 +105,27 @@ void renderUI(HelloVulkan& helloVk)
       pc.lightSpotCutoff      = cos(deg2rad(dCutoff));
       pc.lightSpotOuterCutoff = cos(deg2rad(dOutCutoff));
     }
-  }
+  }*/
 
   
   //ISOValue
   changed |= ImGui::SliderFloat("ISOValue", &helloVk.m_atrInfo.ISOValue, 0.0f, 2.0f);
 
-  static bool useAmbinetOcclusion;
-  changed |= ImGui::Checkbox("Ambient Occlusion", &useAmbinetOcclusion);
-  helloVk.m_atrInfo.useAmbinetOcclusion[0] = useAmbinetOcclusion ? 1 : 0;
+  static bool enableRefinement = true;
+  changed |= ImGui::Checkbox("Enable Refinement", &enableRefinement);
+  helloVk.m_atrInfo.enableRefinement = enableRefinement ? 1 : 0;
+        
   static float color[4] = {1.0f, 1.0f, 1.0f, 1.0f};
   changed |= ImGui::ColorEdit3("AO color", reinterpret_cast<float*>(&color));
   helloVk.m_atrInfo.ambientColor = {color[0], color[1], color[2], color[3]};
 
-  //changed |=  ImGui::ColorEdit3("color", color);
+  changed |= ImGui::SliderFloat("Step Size Scale", &helloVk.m_atrInfo.stepSize, 0.1f, 2.0f);
 
+  static bool useAmbinetOcclusion = false;
+  changed |= ImGui::Checkbox("Ambient Occlusion", &useAmbinetOcclusion);
+  helloVk.m_atrInfo.useAmbinetOcclusion = useAmbinetOcclusion ? 1 : 0;
+  //changed |=  ImGui::ColorEdit3("color", color);
+   
   vgm::Vec3 dir(helloVk.m_atrInfo.planeNormal.x, helloVk.m_atrInfo.planeNormal.y, helloVk.m_atrInfo.planeNormal.z);
   changed |= ImGui::gizmo3D("Plane Normal", dir, 100, imguiGizmo::modeDirPlane);
   helloVk.m_atrInfo.planeNormal.x = dir.x;
@@ -133,10 +139,10 @@ void renderUI(HelloVulkan& helloVk)
   helloVk.m_atrInfo.planePosition.x = pos.x;
   helloVk.m_atrInfo.planePosition.y = pos.y;
   helloVk.m_atrInfo.planePosition.z = pos.z;
-
-  static bool enableRefinement = true;
-  changed |= ImGui::Checkbox("Enable Refinement", &enableRefinement);
-  helloVk.m_atrInfo.enableRefinement = enableRefinement ? 1 : 0;
+    
+  static bool hideClipPlane = false;
+  changed |= ImGui::Checkbox("Hide Clip Plane", &hideClipPlane);
+  helloVk.m_atrInfo.hideClipPlane = hideClipPlane ? 1 : 0;
 
   changed |= ImGui::SliderInt("Max Frames", &helloVk.m_maxFrames, 1, 1000);
   if(changed)

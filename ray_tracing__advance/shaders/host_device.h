@@ -82,12 +82,16 @@ struct AtrInfo
 {
   int   enableRefinement;
   float ISOValue;
-  float minAtrValue, maxAtrValue;
+  float stepSize;
+  float minAtrValue;
+  float maxAtrValue;
+  int	hideClipPlane;
+  int	useAmbinetOcclusion;
+  int	padding3;
   vec4  planeNormal;
   vec4  planePosition;
   vec4  minPoint;
   vec4  dimension;
-  int   useAmbinetOcclusion[4];
   vec4  randomDirections[128];
   vec4  ambientColor;
 };

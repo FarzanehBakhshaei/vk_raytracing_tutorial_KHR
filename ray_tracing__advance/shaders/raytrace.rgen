@@ -97,9 +97,10 @@ void main()
         prd.rayOrigin           = origin.xyz;
         prd.rayDir              = direction.xyz;
 
-//
-        render3dUIObjects(origin.xyz, direction.xyz);
-//
+
+        if(ai.hideClipPlane == 0) {
+            render3dUIObjects(origin.xyz, direction.xyz);
+        }
 
         vec3 minCorner = ai.minPoint.xyz;
         vec3 maxCorner = ai.minPoint.xyz + ai.dimension.xyz;
@@ -182,7 +183,7 @@ void main()
         bool doRayMarching = tMax > tMin && tMin > 0 && !ignoreRayTracing;
         
         if(doRayMarching) {
-            float stepSize = 0.5f;// ai.ISOValue;//length(maxCorner - minCorner) / 400.f;//(tMax - tMin) / 100.f;
+            float stepSize = ai.stepSize; //0.5f;//length(maxCorner - minCorner) / 400.f;//(tMax - tMin) / 100.f;
             float t = tMin;
             
             for(int i=0; i<500 && t < tMax; ++i , t += stepSize) {
@@ -201,7 +202,7 @@ void main()
                     }
                     normal = calculateNormal(normalizedCoord);
 
-                    if(ai.useAmbinetOcclusion[0] != 0)
+                    if(ai.useAmbinetOcclusion != 0)
                     {
                         mat3 tangentSpaceTransformation = calculateTransform(normal);   // normal space transformation
 
@@ -245,7 +246,7 @@ void main()
 #elif ENABLED_DVR
                 normal = calculateNormal(normalizedCoord);
                 
-                if(ai.useAmbinetOcclusion[0] != 0)
+                if(ai.useAmbinetOcclusion != 0)
                 {
                     mat3 tangentSpaceTransformation = calculateTransform(normal);   // normal space transformation
 

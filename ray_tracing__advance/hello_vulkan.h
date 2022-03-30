@@ -99,7 +99,7 @@ public:
   std::vector<ObjModel>    m_objModel;   // Model on host
   std::vector<ObjDesc>     m_objDesc;    // Model description for device access
   std::vector<ObjInstance> m_instances;  // Scene model instances
-  AtrInfo     m_atrInfo;
+  AtrInfo                  m_atrInfo;
   vec4                     m_center;    // center of geometry
 
   nvmath::mat4f calculateTransform(vec3 N, vec3 P, float scale);
