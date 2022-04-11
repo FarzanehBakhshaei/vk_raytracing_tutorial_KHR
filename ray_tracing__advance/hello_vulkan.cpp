@@ -175,6 +175,11 @@ void HelloVulkan::createDescriptorSetLayout()
                                  VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR
                                      | VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_COMPUTE_BIT);
 
+  // ColormapSampler
+  m_descSetLayoutBind.addBinding(SceneBindings::eColormapSampler, VK_DESCRIPTOR_TYPE_SAMPLER, 1,
+                                 VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR
+                                     | VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_COMPUTE_BIT);
+
   // Storing implicit obj (binding = 3)
   m_descSetLayoutBind.addBinding(eImplicits, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1,
                                  VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_INTERSECTION_BIT_KHR
@@ -232,6 +237,9 @@ void HelloVulkan::updateDescriptorSet()
   diiC.sampler = VK_NULL_HANDLE;
   writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, SceneBindings::eColormapTexture, &diiC));
 
+  // ColormapSampler
+  VkDescriptorImageInfo diiCS{m_ColormapSampler};
+  writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, SceneBindings::eColormapSampler, &diiCS));
 
   VkDescriptorBufferInfo dbiImplDesc{m_implObjects.implBuf.buffer, 0, VK_WHOLE_SIZE};
   writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, 3, &dbiImplDesc));
@@ -443,7 +451,7 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
   VkSamplerCreateInfo samplerCreateInfo{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
   samplerCreateInfo.minFilter   = VK_FILTER_LINEAR;
   samplerCreateInfo.magFilter   = VK_FILTER_LINEAR;
-  samplerCreateInfo.mipmapMode  = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+  samplerCreateInfo.mipmapMode  = VK_SAMPLER_MIPMAP_MODE_NEAREST;
   samplerCreateInfo.maxLod      = 1;
   samplerCreateInfo.anisotropyEnable = VK_TRUE;
   samplerCreateInfo.maxAnisotropy    = 16;
@@ -474,6 +482,25 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
   if(vkCreateSampler(m_device, &minMaxSampCreateInfo, nullptr, &m_MinMaxSampler) != VK_SUCCESS)
   {
     throw std::runtime_error("cannot create min_max sampler.\n");
+  }
+
+  VkSamplerCreateInfo colormapSampCreateInfo{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+  colormapSampCreateInfo.minFilter          = VK_FILTER_LINEAR;
+  colormapSampCreateInfo.magFilter          = VK_FILTER_LINEAR;
+  colormapSampCreateInfo.mipmapMode         = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+  colormapSampCreateInfo.maxLod             = 1;
+  colormapSampCreateInfo.anisotropyEnable   = VK_TRUE;
+  colormapSampCreateInfo.maxAnisotropy      = 16;
+  colormapSampCreateInfo.unnormalizedCoordinates = VK_FALSE;
+  colormapSampCreateInfo.addressModeU            = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+  colormapSampCreateInfo.addressModeV            = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+  colormapSampCreateInfo.addressModeW            = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+  //samplerCreateInfo.borderColor                  = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+
+  // create colormap sampler
+  if(vkCreateSampler(m_device, &colormapSampCreateInfo, nullptr, &m_ColormapSampler) != VK_SUCCESS)
+  {
+    throw std::runtime_error("cannot create colormap sampler.\n");
   }
 
   nvvk::Image image             = m_alloc.createImage(cmdBuf, bufferSize, simVisPtr->attributesList[0].data(), imageCreateInfo);
@@ -518,6 +545,8 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
   m_center                  = (m_atrInfo.dimension - m_atrInfo.minPoint)/2.f;
   m_atrInfo.planeNormal     = vec4(1.f, 0.f, 0.f, 0.f);
   m_atrInfo.planePosition   = m_center;
+  m_atrInfo.useHeadLight    = 1;
+  m_atrInfo.shadowRay    = 0;
   fillRandomDirections();   // to initiate m_atrInfo.randomDirections
 }
 
@@ -541,9 +570,9 @@ void HelloVulkan::createColormap()
   imageInfo.sharingMode          = VK_SHARING_MODE_EXCLUSIVE;
   imageInfo.usage                = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
-  nvvk::Image           tex    = m_alloc.createImage(imageInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+  nvvk::Image           tex      = m_alloc.createImage(imageInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
   VkImageViewCreateInfo ivInfo   = nvvk::makeImageViewCreateInfo(tex.image, imageInfo);
-  m_colormapTexture            = m_alloc.createTexture(tex, ivInfo);
+  m_colormapTexture              = m_alloc.createTexture(tex, ivInfo);
 }
 
 void HelloVulkan::updateColormap(const VkCommandBuffer& cmdBuff, std::vector<uint8_t> colormap) 
@@ -839,7 +868,7 @@ nvmath::mat4f HelloVulkan::calculateTransform(vec3 N, vec3 P, float s)
   scale.identity();
   scale.scale(s);
 
-  mat3 = mat1 * mat2 *  scale * mat0;
+  mat3 = mat1 * mat2 * scale * mat0;
   return mat3;
 }
 

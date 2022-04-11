@@ -49,7 +49,8 @@ START_BINDING(SceneBindings)
   eAtrInfo = 5,
   eAtrSamplerLinear = 6,
   eAtrSamplerMinMax = 7,
-  eColormapTexture = 8
+  eColormapTexture = 8,
+  eColormapSampler = 9
 END_BINDING();
 
 START_BINDING(RtxBindings)
@@ -80,14 +81,16 @@ struct GlobalUniforms
 
 struct AtrInfo
 {
-  int   enableRefinement;
   float ISOValue;
   float stepSize;
   float minAtrValue;
   float maxAtrValue;
+  int   enableRefinement;
   int	hideClipPlane;
   int	useAmbinetOcclusion;
-  int	padding3;
+  int	useHeadLight;
+  int   shadowRay;
+  int   padding1, padding2, padding3;
   vec4  planeNormal;
   vec4  planePosition;
   vec4  minPoint;

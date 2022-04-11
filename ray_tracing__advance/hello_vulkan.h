@@ -146,6 +146,7 @@ public:
   void addImplMaterial(const MaterialObj& mat);
   void createImplictBuffers();
 
-  VkSampler m_linearSampler = VK_NULL_HANDLE;
-  VkSampler m_MinMaxSampler = VK_NULL_HANDLE;
+  VkSampler m_linearSampler     = VK_NULL_HANDLE;
+  VkSampler m_MinMaxSampler     = VK_NULL_HANDLE;
+  VkSampler m_ColormapSampler   = VK_NULL_HANDLE;
 };

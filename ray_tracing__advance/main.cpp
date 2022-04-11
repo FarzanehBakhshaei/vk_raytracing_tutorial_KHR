@@ -70,7 +70,7 @@ void renderUI(HelloVulkan& helloVk)
   bool changed = false;
 
   changed |= ImGuiH::CameraWidget();
-  /*if(ImGui::CollapsingHeader("Light"))
+  if(ImGui::CollapsingHeader("Light"))
   {
     auto& pc = helloVk.m_pcRaster;
 
@@ -105,16 +105,17 @@ void renderUI(HelloVulkan& helloVk)
       pc.lightSpotCutoff      = cos(deg2rad(dCutoff));
       pc.lightSpotOuterCutoff = cos(deg2rad(dOutCutoff));
     }
-  }*/
+  }
 
-  
-  //ISOValue
-  changed |= ImGui::SliderFloat("ISOValue", &helloVk.m_atrInfo.ISOValue, 0.0f, 2.0f);
+  //if(ImGui::CollapsingHeader("ISO Surface rendering"))
+  //{
+    //ISOValue
+    changed |= ImGui::SliderFloat("ISOValue", &helloVk.m_atrInfo.ISOValue, 0.0f, 2.0f);
 
-  static bool enableRefinement = true;
-  changed |= ImGui::Checkbox("Enable Refinement", &enableRefinement);
-  helloVk.m_atrInfo.enableRefinement = enableRefinement ? 1 : 0;
-        
+    static bool enableRefinement = true;
+    changed |= ImGui::Checkbox("Enable Refinement", &enableRefinement);
+    helloVk.m_atrInfo.enableRefinement = enableRefinement ? 1 : 0;
+  //}      
   static float color[4] = {1.0f, 1.0f, 1.0f, 1.0f};
   changed |= ImGui::ColorEdit3("AO color", reinterpret_cast<float*>(&color));
   helloVk.m_atrInfo.ambientColor = {color[0], color[1], color[2], color[3]};
@@ -131,6 +132,7 @@ void renderUI(HelloVulkan& helloVk)
   helloVk.m_atrInfo.planeNormal.x = dir.x;
   helloVk.m_atrInfo.planeNormal.y = dir.y;
   helloVk.m_atrInfo.planeNormal.z = dir.z;
+  helloVk.m_atrInfo.planeNormal.w = 0.f;
   
   //changed |= ImGui::SliderFloat3("Plane Normal", (float*)&helloVk.m_atrInfo.planeNormal, 0.0f, 360.0f);
 
@@ -139,15 +141,26 @@ void renderUI(HelloVulkan& helloVk)
   helloVk.m_atrInfo.planePosition.x = pos.x;
   helloVk.m_atrInfo.planePosition.y = pos.y;
   helloVk.m_atrInfo.planePosition.z = pos.z;
+  helloVk.m_atrInfo.planePosition.w = 1.f;
     
   static bool hideClipPlane = false;
-  changed |= ImGui::Checkbox("Hide Clip Plane", &hideClipPlane);
+  changed |= ImGui::Checkbox("Hide ClipPlane", &hideClipPlane);
   helloVk.m_atrInfo.hideClipPlane = hideClipPlane ? 1 : 0;
+
+  ImGui::SameLine();
+  //ImGUi::
+  static bool useHeadLight = true;
+  changed |= ImGui::Checkbox("Head Light", &useHeadLight);
+  helloVk.m_atrInfo.useHeadLight = useHeadLight ? 1 : 0;
+
+  static bool shadowRay = false;
+  changed |= ImGui::Checkbox("Shadow ray", &shadowRay);
+  helloVk.m_atrInfo.shadowRay = shadowRay ? 1 : 0;
 
   changed |= ImGui::SliderInt("Max Frames", &helloVk.m_maxFrames, 1, 1000);
   if(changed)
     helloVk.resetFrame();
-}
+  }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -247,8 +260,8 @@ int main(int argc, char** argv)
   
   bool kitten = false;
   // Creation of the example
-  //helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData1_snapshot.dat", defaultSearchPaths, true).c_str());
-  helloVk.loadVolumetricData(nvh::findFile("media/scenes/kitten_132_115_200_its500.dat", defaultSearchPaths, true).c_str());kitten = true;
+  helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData1_snapshot.dat", defaultSearchPaths, true).c_str());
+  //helloVk.loadVolumetricData(nvh::findFile("media/scenes/kitten_132_115_200_its500.dat", defaultSearchPaths, true).c_str());kitten = true;
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData.dat", defaultSearchPaths, true).c_str());
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/femur3D_144_96_184_A_its400.dat", defaultSearchPaths, true).c_str());
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/cantilever3D_256_128_128_iLoad3_R20_its500.dat", defaultSearchPaths, true).c_str());
@@ -358,10 +371,14 @@ int main(int argc, char** argv)
     {
       ImGuiH::Panel::Begin();
       bool changed = false;
-      // Edit 3 floats representing a color
-      changed |= ImGui::ColorEdit3("Background color", reinterpret_cast<float*>(&clearColor));
-      // Switch between raster and ray tracing
-      changed |= ImGui::Checkbox("Ray Tracer mode", &useRaytracer);
+
+      if(ImGui::CollapsingHeader("Background color"))
+      {
+        // Edit 3 floats representing a color
+        changed |= ImGui::ColorEdit3("Background color", reinterpret_cast<float*>(&clearColor));
+        // Switch between raster and ray tracing
+        changed |= ImGui::Checkbox("Ray Tracer mode", &useRaytracer);
+      }
       if(changed)
         helloVk.resetFrame();
 
