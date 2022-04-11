@@ -355,8 +355,8 @@ void HelloVulkan::loadModel(const std::string& filename, nvmath::mat4f transform
 void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transform)
 {
   //return;
-  //SimVisDataPtr simVisPtr = SimVisData::loadFromFile(filePath);
-  SimVisDataPtr simVisPtr = SimVisData::loadSphere(32);
+  SimVisDataPtr simVisPtr = SimVisData::loadFromFile(filePath);
+  //SimVisDataPtr simVisPtr = SimVisData::loadSphere(32);
   std::vector<MaterialObj> materials(128, MaterialObj());
   std::vector<std::string> textures;
 
