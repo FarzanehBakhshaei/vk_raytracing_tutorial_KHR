@@ -39,17 +39,6 @@
 
 #include <random>
 
-namespace tfnw {
-uint8_t rainbow2[] = {0x89, 0x50, 0x4e, 0x47, 0xd,  0xa,  0x1a, 0xa,  0x0,  0x0,  0x0,  0xd,  0x49, 0x48, 0x44, 0x52,
-                     0x0,  0x0,  0x0,  0xb4, 0x0,  0x0,  0x0,  0x1,  0x8,  0x6,  0x0,  0x0,  0x0,  0x77, 0xca, 0x84,
-                     0xf4, 0x0,  0x0,  0x0,  0x46, 0x49, 0x44, 0x41, 0x54, 0x78, 0x5e, 0x63, 0x64, 0x60, 0xf8, 0xff,
-                     0x9f, 0x81, 0x85, 0x81, 0x1,  0x8c, 0x39, 0x70, 0xd0, 0x20, 0xf9, 0xc1, 0x24, 0xc7, 0xfe, 0x1f,
-                     0xe8, 0xd0, 0x3f, 0x40, 0xfc, 0x3,  0x8d, 0xc6, 0x26, 0x6,  0x53, 0x33, 0xb0, 0x72, 0x4c, 0xc,
-                     0xff, 0x18, 0xd0, 0x83, 0x70, 0xb0, 0x5,  0x2b, 0xba, 0xfb, 0x18, 0x7f, 0x42, 0x83, 0x77, 0xf0,
-                     0x6,  0x2b, 0x3,  0x3,  0xb2, 0xdb, 0xfe, 0x30, 0x30, 0x0,  0x0,  0x85, 0x9e, 0x5d, 0x0,  0x63,
-                     0x5b, 0x7,  0x6f, 0x0,  0x0,  0x0,  0x0,  0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82};
-}
-
 //////////////////////////////////////////////////////////////////////////
 #define UNUSED(x) (void)(x)
 //////////////////////////////////////////////////////////////////////////
@@ -70,11 +59,11 @@ void renderUI(HelloVulkan& helloVk)
   bool changed = false;
 
   changed |= ImGuiH::CameraWidget();
-  if(ImGui::CollapsingHeader("Light"))
-  {
+  //if(ImGui::CollapsingHeader("Light"))
+  //{
     auto& pc = helloVk.m_pcRaster;
 
-    changed |= ImGui::RadioButton("Point", &pc.lightType, 0);
+ /*   changed |= ImGui::RadioButton("Point", &pc.lightType, 0);
     ImGui::SameLine();
     changed |= ImGui::RadioButton("Spot", &pc.lightType, 1);
     ImGui::SameLine();
@@ -86,9 +75,9 @@ void renderUI(HelloVulkan& helloVk)
       changed |= ImGui::SliderFloat3("Light Position", &pc.lightPosition.x, -1000.f, 1000.f);
     }
     if(pc.lightType > 0)
-    {
+    {*/
       changed |= ImGui::SliderFloat3("Light Direction", &pc.lightDirection.x, -1.f, 1.f);
-    }
+    /*}
     if(pc.lightType < 2)
     {
       changed |= ImGui::SliderFloat("Light Intensity", &pc.lightIntensity, 0.f, 500.f);
@@ -105,7 +94,7 @@ void renderUI(HelloVulkan& helloVk)
       pc.lightSpotCutoff      = cos(deg2rad(dCutoff));
       pc.lightSpotOuterCutoff = cos(deg2rad(dOutCutoff));
     }
-  }
+  }*/
 
   //if(ImGui::CollapsingHeader("ISO Surface rendering"))
   //{
@@ -157,7 +146,7 @@ void renderUI(HelloVulkan& helloVk)
   changed |= ImGui::Checkbox("Shadow ray", &shadowRay);
   helloVk.m_atrInfo.shadowRay = shadowRay ? 1 : 0;
 
-  changed |= ImGui::SliderInt("Max Frames", &helloVk.m_maxFrames, 1, 1000);
+  //changed |= ImGui::SliderInt("Max Frames", &helloVk.m_maxFrames, 1, 1000);
   if(changed)
     helloVk.resetFrame();
   }

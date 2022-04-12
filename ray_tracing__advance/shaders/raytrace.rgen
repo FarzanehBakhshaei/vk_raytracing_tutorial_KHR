@@ -39,7 +39,7 @@ layout(push_constant) uniform _PushConstantRay { PushConstantRay pcRay; };
 //  
 layout(std430, set = 1, binding = eAtrInfo) uniform _AtrInfoUniforms { AtrInfo ai; };
 layout(set = 1, binding = eAtrSamplerLinear) uniform sampler AtrSampLin;
-layout(set = 1, binding = eColormapSampler) uniform sampler ColormapSampler;
+layout(set = 1, binding = eColormapSampler) uniform sampler colormapSampler;
 layout(set = 1, binding = eAtrTexture) uniform texture3D atrTexture;
 layout(set = 1, binding = eColormapTexture) uniform texture1D colormapTexture;
 layout(location = 3) callableDataEXT rayLight cLight;
@@ -80,13 +80,18 @@ void main()
     vec4 finalColor = vec4(0);
     float finalAO = 0;
 
+    // show colormap
     ivec2 colormap_pos  = ivec2(gl_LaunchSizeEXT.x * 0.75f,  gl_LaunchSizeEXT.y * 0.95f);
-    ivec2 colormap_size = ivec2(gl_LaunchSizeEXT.x * 0.025f, gl_LaunchSizeEXT.y * 0.2f);
-    if( gl_LaunchIDEXT.x > colormap_pos.x && gl_LaunchIDEXT.x < (colormap_pos.x + colormap_size.x)  &&
+    ivec2 colormap_size = ivec2(gl_LaunchSizeEXT.x * 0.2f, gl_LaunchSizeEXT.y * 0.025f);        // horizontal
+    //ivec2 colormap_size = ivec2(gl_LaunchSizeEXT.x * 0.025f, gl_LaunchSizeEXT.y * 0.2f);      // vertical
+    if( 
+        //gl_LaunchIDEXT.x > colormap_pos.x && gl_LaunchIDEXT.x < (colormap_pos.x + colormap_size.x)  &&      // vertical
+        gl_LaunchIDEXT.x < colormap_pos.x && gl_LaunchIDEXT.x > (colormap_pos.x - colormap_size.x)  &&      // horizontal
         gl_LaunchIDEXT.y < colormap_pos.y && gl_LaunchIDEXT.y > (colormap_pos.y - colormap_size.y)  )
     {
-        float v = float(gl_LaunchIDEXT.y - colormap_pos.y + colormap_size.y) / colormap_size.y;
-        vec4 color =  texture(sampler1D(colormapTexture, ColormapSampler), v);
+//        float v = float(gl_LaunchIDEXT.y - colormap_pos.y + colormap_size.y) / colormap_size.y;       // VERTICAL
+        float v = float(gl_LaunchIDEXT.x - colormap_pos.x + colormap_size.x) / colormap_size.x;         // normalized coordinate of the current pixel in colormap bar // horizontal
+        vec4 color =  texture(sampler1D(colormapTexture, colormapSampler), v);
         
         imageStore(image, ivec2(gl_LaunchIDEXT.xy), color);
         return;
@@ -157,7 +162,7 @@ void main()
         
         float entryPosProj = dot(entryPos - ai.planePosition.xyz, ai.planeNormal.xyz);      // to see whether the volume is in front of clip plane or behind it, related to its normal
         float exitPosProj = dot(exitPos - ai.planePosition.xyz, ai.planeNormal.xyz);
-        bool stopRay = false;
+        //bool stopRay = false;
 
         // if both entry and exit points are on the side of the clip plane that 
         // should be clipped
@@ -201,8 +206,7 @@ void main()
             
             for(int i=0; i<500 && t < tMax; ++i , t += stepSize) {
                 vec3 p = origin.xyz + t * direction.xyz;
-                vec3 normalizedCoord = (p - ai.minPoint.xyz) / ai.dimension.xyz;
-                            
+                vec3 normalizedCoord = (p - ai.minPoint.xyz) / ai.dimension.xyz;   
                 float attr = texture(sampler3D(atrTexture, AtrSampLin), clamp(normalizedCoord, vec3(0.0f), vec3(1.0f))).x;
 #if ENABLED_ISOVALUE
                 if(attr >= ai.ISOValue) 
@@ -232,6 +236,12 @@ void main()
                                 if(dot((p0 - ai.planePosition.xyz), ai.planeNormal.xyz) >= 0)   // point in the side of plane normal
                                     break;
                                 normalizedCoord = (p0 - ai.minPoint.xyz) / ai.dimension.xyz;
+                                if(
+                                    normalizedCoord.x < 0 || normalizedCoord.x > 1 ||
+                                    normalizedCoord.y < 0 || normalizedCoord.y > 1 ||
+                                    normalizedCoord.z < 0 || normalizedCoord.z > 1)
+
+                                    break;
                                 float a = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
                                 if(a >= ai.ISOValue) {       // occoluded
                                     ao += 1.f;
@@ -253,6 +263,12 @@ void main()
                             if(dot((p0 - ai.planePosition.xyz), ai.planeNormal.xyz) >= 0)
                                 break;  
                             normalizedCoord = (p0 - ai.minPoint.xyz) / ai.dimension.xyz;
+                            if(
+                                normalizedCoord.x < 0 || normalizedCoord.x > 1 ||
+                                normalizedCoord.y < 0 || normalizedCoord.y > 1 ||
+                                normalizedCoord.z < 0 || normalizedCoord.z > 1)
+
+                                break;
                             float a = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
                             if(a >= ai.ISOValue) {       // occoluded
                                 shadow = 1.f;
@@ -298,6 +314,12 @@ void main()
                              if(dot((p0 - ai.planePosition.xyz), ai.planeNormal.xyz) >= 0)   // point in the side of plane normal
                                     break;
                             normalizedCoord = (p0 - ai.minPoint.xyz) / ai.dimension.xyz;
+                            if(
+                                normalizedCoord.x < 0 || normalizedCoord.x > 1 ||
+                                normalizedCoord.y < 0 || normalizedCoord.y > 1 ||
+                                normalizedCoord.z < 0 || normalizedCoord.z > 1)
+
+                                break;
                             float atr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
                                                             
                             // Front-to-back strategy
@@ -324,7 +346,14 @@ void main()
                         if(dot((p0 - ai.planePosition.xyz), ai.planeNormal.xyz) >= 0)
                             break;  
                         normalizedCoord = (p0 - ai.minPoint.xyz) / ai.dimension.xyz;
-                                                              
+                                                
+                        if(
+                            normalizedCoord.x < 0 || normalizedCoord.x > 1 ||
+                            normalizedCoord.y < 0 || normalizedCoord.y > 1 ||
+                            normalizedCoord.z < 0 || normalizedCoord.z > 1)
+
+                            break;
+                        
                         float atr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
                         float a = mapColormap(atr).a;
                                                                                   
@@ -403,7 +432,7 @@ void main()
 
 vec4 mapColormap (float value) {
     float normalizedValue = (value - ai.minAtrValue) / (ai.maxAtrValue - ai.minAtrValue);
-    vec4 color =  texture(sampler1D(colormapTexture, ColormapSampler), normalizedValue);
+    vec4 color =  texture(sampler1D(colormapTexture, colormapSampler), normalizedValue);
     return color;
 }
 
