@@ -54,8 +54,8 @@ mat3 calculateTransform(vec3 N);
 void render3dUIObjects(vec3 rayOrigin, vec3 rayDirection);
 vec3 refineISOSurface(vec3 rayOrigin, vec3 rayDirection, float stepSize, vec3 p, float t);
 
-#define ENABLED_ISOVALUE                      0
-//#define ENABLED_REFINEMENT         (1 && ENABLED_ISOVALUE)
+#define ENABLED_ISOVALUE                      1
+#define ENABLED_REFINEMENT         (1 && ENABLED_ISOVALUE)
 #define ENABLED_DVR                (1 && !ENABLED_ISOVALUE)
 
 #define ENABLED_DEBUG_AMBIENT_OCCLUSION       0
@@ -188,7 +188,7 @@ void main()
 //            ignoreRayTracing = true;
 //            hitValues = vec4 (0.f, 0.f, 1.f, 0.f);
 //        }
-        if(prd.tHit < 10000 && prd.tHit > 0 && prd.tHit < tMax)
+        if(prd.tHit < 10000 && prd.tHit > 0 && prd.tHit < tMax)     // means clipplane or its normal is in front of the volume, so render its frame or vector and dont render behind it
         {
             vec4 C = prd.hitValue;
             float ain = hitValues.a;
@@ -206,32 +206,41 @@ void main()
             
             for(int i=0; i<500 && t < tMax; ++i , t += stepSize) {
                 vec3 p = origin.xyz + t * direction.xyz;
-                vec3 normalizedCoord = (p - ai.minPoint.xyz) / ai.dimension.xyz;   
-                float attr = texture(sampler3D(atrTexture, AtrSampLin), clamp(normalizedCoord, vec3(0.0f), vec3(1.0f))).x;
+                vec3 normalizedCoord = (p - ai.minPoint.xyz) / ai.dimension.xyz;
+                if(
+                    normalizedCoord.x < 0 || normalizedCoord.x > 1 ||
+                    normalizedCoord.y < 0 || normalizedCoord.y > 1 ||
+                    normalizedCoord.z < 0 || normalizedCoord.z > 1)
+                    continue;
+
+                float attr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;//, clamp(normalizedCoord, vec3(0.0f), vec3(1.0f))).x; //
 #if ENABLED_ISOVALUE
                 if(attr >= ai.ISOValue) 
                 {                    
                     if(ai.enableRefinement == 1) {
                         if(i > 0) {
                             normalizedCoord = refineISOSurface(origin.xyz, direction.xyz, stepSize, p, t);
-                            attr = texture(sampler3D(atrTexture, AtrSampLin), clamp(normalizedCoord, vec3(0.0f), vec3(1.0f))).x;
+                            if( normalizedCoord.x < 0 || normalizedCoord.x > 1 ||
+                                normalizedCoord.y < 0 || normalizedCoord.y > 1 ||
+                                normalizedCoord.z < 0 || normalizedCoord.z > 1)
+                                continue;
+                            attr = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;//, clamp(normalizedCoord, vec3(0.0f), vec3(1.0f))).x;
                         }
                     }
                     normal = calculateNormal(normalizedCoord);
 
                     if(ai.useAmbinetOcclusion != 0)
                     {
-                        mat3 tangentSpaceTransformation = calculateTransform(normal);   // normal space transformation
+                        mat3 tangentSpaceTransformation = calculateTransform(-normal);   // normal space transformation
 
-                        const int aoSampleCount = 128;
+                        const int aoSampleCount = 16;
 
                         for(int d=0; d<aoSampleCount; ++d) {
                             vec3 dir = normalize(tangentSpaceTransformation * ai.randomDirections[d].xyz); // bring directions from world space to tanget space
-                            if(false && dot(dir, normal) < 0) {
+                            if(dot(dir, -normal) < 0) {
                                 dir = -dir;
-                            }
-                            
-                            for(int s=1; s<500; ++s) {   // s = 2: to avoid self intersections
+                            }                            
+                            for(int s=2; s<500; ++s) {   // s = 2: to avoid self intersections
                                 vec3 p0 = p + dir * s * stepSize;       // 
                                 if(dot((p0 - ai.planePosition.xyz), ai.planeNormal.xyz) >= 0)   // point in the side of plane normal
                                     break;
@@ -240,10 +249,10 @@ void main()
                                     normalizedCoord.x < 0 || normalizedCoord.x > 1 ||
                                     normalizedCoord.y < 0 || normalizedCoord.y > 1 ||
                                     normalizedCoord.z < 0 || normalizedCoord.z > 1)
-
                                     break;
                                 float a = texture(sampler3D(atrTexture, AtrSampLin), normalizedCoord).x;
-                                if(a >= ai.ISOValue) {       // occoluded
+                                if(a >= ai.ISOValue) 
+                                {       // occoluded
                                     ao += 1.f;
                                     break;
                                 }
@@ -299,13 +308,13 @@ void main()
                 
                 if(ai.useAmbinetOcclusion != 0)
                 {
-                    mat3 tangentSpaceTransformation = calculateTransform(normal);   // normal space transformation
+                    mat3 tangentSpaceTransformation = calculateTransform(-normal);   // normal space transformation
 
                     const int aoSampleCount = 16;
 
                     for(int d=0; d<aoSampleCount; ++d) {
                         vec3 dir = normalize(tangentSpaceTransformation * ai.randomDirections[d].xyz); // bring directions from world space to tanget space
-                        if(false && dot(dir, normal) < 0) {
+                        if(dot(dir, -normal) < 0) {
                             dir = -dir;
                         }
                         float collectedOcclusion = 0.f;
@@ -450,7 +459,7 @@ vec3 calculateNormal (vec3 normalizedCoord) {
     float f_ZPlusDeltaZ    = texture(sampler3D(atrTexture, AtrSampLin),  (normalizedCoord + vec3(0.0f, 0.0f,   forwardStep.z))).r;
     float f_ZMinusDeltaZ   = texture(sampler3D(atrTexture, AtrSampLin),  (normalizedCoord - vec3(0.0f, 0.0f,  backwardStep.z))).r;
 
-    vec3 n = vec3 (f_XPlusDeltaX - f_XMinusDeltaX, f_YPlusDeltaY - f_YMinusDeltaY, f_ZPlusDeltaZ - f_ZMinusDeltaZ) * ai.dimension.xyz * 0.5f;
+    vec3 n = vec3 (f_XPlusDeltaX - f_XMinusDeltaX, f_YPlusDeltaY - f_YMinusDeltaY, f_ZPlusDeltaZ - f_ZMinusDeltaZ) * 0.5f;
     if(dot(n, n) < 0.000001f)    // |n^2| < 0.001f
         normal = vec3(0.0f);
     else
@@ -526,7 +535,7 @@ mat3 calculateTransform(vec3 N)
   mat3 m2 = mat3(vec3(X.x, Y.x, Z.x),
                  vec3(X.y, Y.y, Z.y),
                  vec3(X.z, Y.z, Z.z));
-  m2 = transpose(m2);
+  //m2 = transpose(m2);
 
   /* mat3 m2 = mat3(X,
                  Y,
