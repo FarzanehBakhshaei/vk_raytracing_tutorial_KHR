@@ -52,9 +52,9 @@ vec3 calculateNormal (vec3 normalizedCoord);
 vec3 computeDiffuseLighting(vec3 normal, vec3 cameraPosition, vec3 worldPosition, float shadow);
 mat3 calculateTransform(vec3 N);
 void render3dUIObjects(vec3 rayOrigin, vec3 rayDirection);
-vec3 refineISOSurface(vec3 rayOrigin, vec3 rayDirection, float stepSize, vec3 p, float t);
+vec3 refineISOSurface(vec3 rayOrigin, vec3 rayDirection, float stepSize, inout vec3 p, float t);
 
-#define ENABLED_ISOVALUE                      1
+#define ENABLED_ISOVALUE                      0
 #define ENABLED_REFINEMENT         (1 && ENABLED_ISOVALUE)
 #define ENABLED_DVR                (1 && !ENABLED_ISOVALUE)
 
@@ -237,10 +237,10 @@ void main()
 
                         for(int d=0; d<aoSampleCount; ++d) {
                             vec3 dir = normalize(tangentSpaceTransformation * ai.randomDirections[d].xyz); // bring directions from world space to tanget space
-                            if(dot(dir, -normal) < 0) {
-                                dir = -dir;
-                            }                            
-                            for(int s=2; s<500; ++s) {   // s = 2: to avoid self intersections
+                            //if(dot(dir, -normal) < 0) {
+                            //    dir = -dir;
+                            //}                            
+                            for(int s=1; s<500; ++s) {   // s = 2: to avoid self intersections
                                 vec3 p0 = p + dir * s * stepSize;       // 
                                 if(dot((p0 - ai.planePosition.xyz), ai.planeNormal.xyz) >= 0)   // point in the side of plane normal
                                     break;
@@ -289,8 +289,8 @@ void main()
                     vec3 diffuse = computeDiffuseLighting(normal, origin.xyz, p, shadow);
                      
                     vec3 ambientColor = ai.ambientColor.rgb;
-                    float diffuseMultiplier = 0.9f;
-                    float ambientMultiplier = 0.1f;
+                    float diffuseMultiplier = 0.5f;
+                    float ambientMultiplier = 0.5f;
 
                     diffuse *= diffuseMultiplier;
                     ambientColor *= ambientMultiplier; 
@@ -314,11 +314,11 @@ void main()
 
                     for(int d=0; d<aoSampleCount; ++d) {
                         vec3 dir = normalize(tangentSpaceTransformation * ai.randomDirections[d].xyz); // bring directions from world space to tanget space
-                        if(dot(dir, -normal) < 0) {
-                            dir = -dir;
-                        }
+                       // if(dot(dir, -normal) < 0) {
+                       //     dir = -dir;
+                       // }
                         float collectedOcclusion = 0.f;
-                        for(int s=2; s<10; ++s) {   // s = 2: to avoid self intersections
+                        for(int s=2; s<32; ++s) {   // s = 2: to avoid self intersections
                             vec3 p0 = p + dir * s * stepSize;       // 
                              if(dot((p0 - ai.planePosition.xyz), ai.planeNormal.xyz) >= 0)   // point in the side of plane normal
                                     break;
@@ -378,8 +378,8 @@ void main()
                 vec3 diffuse = computeDiffuseLighting(normal, origin.xyz, p, shadow);
                 
                 vec3 ambientColor = ai.ambientColor.rgb;//vec3(1.f);
-                float diffuseMultiplier = 0.9;
-                float ambientMultiplier = 1.f;
+                float diffuseMultiplier = 0.5f;
+                float ambientMultiplier = 0.8f;
 
                 diffuse *= diffuseMultiplier;
                 ambientColor *= ambientMultiplier; 
@@ -567,7 +567,7 @@ void render3dUIObjects(vec3 rayOrigin, vec3 rayDirection) {
         );
 }
 
-vec3 refineISOSurface(vec3 rayOrigin, vec3 rayDirection, float stepSize, vec3 p, float t) {
+vec3 refineISOSurface(vec3 rayOrigin, vec3 rayDirection, float stepSize, inout vec3 p, float t) {
     vec3 lastPos = rayOrigin + (t-stepSize) * rayDirection;
     for (int j=0; j<10; j++) {
         vec3 midPos = (p + lastPos)/2.f;
