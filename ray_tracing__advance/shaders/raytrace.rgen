@@ -236,7 +236,7 @@ void main()
                         const int aoSampleCount = 16;
 
                         for(int d=0; d<aoSampleCount; ++d) {
-                            vec3 dir = normalize(tangentSpaceTransformation * ai.randomDirections[d].xyz); // bring directions from world space to tanget space
+                            vec3 dir = normalize(tangentSpaceTransformation * ai.randomDirectionsOnSphere[d].xyz); // bring directions from world space to tanget space
                             //if(dot(dir, -normal) < 0) {
                             //    dir = -dir;
                             //}                            
@@ -313,7 +313,7 @@ void main()
                     const int aoSampleCount = 16;
 
                     for(int d=0; d<aoSampleCount; ++d) {
-                        vec3 dir = normalize(tangentSpaceTransformation * ai.randomDirections[d].xyz); // bring directions from world space to tanget space
+                        vec3 dir = normalize(tangentSpaceTransformation * ai.randomDirectionsOnHemisphere[d].xyz); // bring directions from world space to tanget space
                        // if(dot(dir, -normal) < 0) {
                        //     dir = -dir;
                        // }

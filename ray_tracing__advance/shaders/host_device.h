@@ -95,7 +95,8 @@ struct AtrInfo
   vec4  planePosition;
   vec4  minPoint;
   vec4  dimension;
-  vec4  randomDirections[128];
+  vec4  randomDirectionsOnHemisphere[128];
+  vec4  randomDirectionsOnSphere[128];
   vec4  ambientColor;
 };
 

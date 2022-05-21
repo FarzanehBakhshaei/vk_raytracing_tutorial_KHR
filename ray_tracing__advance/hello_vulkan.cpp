@@ -75,11 +75,32 @@ vec3 randomDirectionOnHemisphere() {
   return nvmath::normalize(vec4(x, y, z, 0.f)); // to map the (x, y, z) on the hemisphere, normalize it. Then we have: (x*x + y*y + z*z) == 1.f 
 }
 
+vec3 randomDirectionOnSphere() {
+  float                                        x, y, z;
+  static std::default_random_engine            generator;
+  static std::uniform_real_distribution<float> distribution(-1.f, 1.f);
+  //static std::uniform_real_distribution<float> distributionZ(0.f, 1.f);
+
+  do
+  {
+    x = distribution(generator);
+    y = distribution(generator);
+    z = distribution(generator);
+  } while((x * x + y * y + z * z) > 1.f);
+
+  return nvmath::normalize(vec4(x, y, z, 0.f));  // to map the (x, y, z) on the semisphere, normalize it. Then we have: (x*x + y*y + z*z) == 1.f
+}
+
 void HelloVulkan::fillRandomDirections() {
-  int size = sizeof(m_atrInfo.randomDirections) / sizeof(m_atrInfo.randomDirections[0]);
+  int size = sizeof(m_atrInfo.randomDirectionsOnHemisphere) / sizeof(m_atrInfo.randomDirectionsOnHemisphere[0]);
   for(int i = 0; i < size; ++i)
   {
-    m_atrInfo.randomDirections[i] = randomDirectionOnHemisphere();
+    m_atrInfo.randomDirectionsOnHemisphere[i] = randomDirectionOnHemisphere();
+  }
+  size = sizeof(m_atrInfo.randomDirectionsOnSphere) / sizeof(m_atrInfo.randomDirectionsOnSphere[0]);
+  for(int i = 0; i < size; ++i)
+  {
+    m_atrInfo.randomDirectionsOnSphere[i] = randomDirectionOnSphere();
   }
 }
 
