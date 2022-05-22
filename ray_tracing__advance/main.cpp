@@ -249,8 +249,8 @@ int main(int argc, char** argv)
   
   bool kitten = false;
   // Creation of the example
-  //helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData1_snapshot.dat", defaultSearchPaths, true).c_str());
-  helloVk.loadVolumetricData(nvh::findFile("media/scenes/kitten_132_115_200_its500.dat", defaultSearchPaths, true).c_str());kitten = true;
+  helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData1_snapshot.dat", defaultSearchPaths, true).c_str());
+  //helloVk.loadVolumetricData(nvh::findFile("media/scenes/kitten_132_115_200_its500.dat", defaultSearchPaths, true).c_str());kitten = true;
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/Bridge-R1081-G.dat", defaultSearchPaths, true).c_str());kitten = true;
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData.dat", defaultSearchPaths, true).c_str());
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/femur3D_144_96_184_A_its400.dat", defaultSearchPaths, true).c_str());

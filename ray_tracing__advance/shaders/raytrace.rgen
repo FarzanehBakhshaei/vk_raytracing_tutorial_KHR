@@ -54,7 +54,7 @@ mat3 calculateTransform(vec3 N);
 void render3dUIObjects(vec3 rayOrigin, vec3 rayDirection);
 vec3 refineISOSurface(vec3 rayOrigin, vec3 rayDirection, float stepSize, inout vec3 p, float t);
 
-#define ENABLED_ISOVALUE                      0
+#define ENABLED_ISOVALUE                      1
 #define ENABLED_REFINEMENT         (1 && ENABLED_ISOVALUE)
 #define ENABLED_DVR                (1 && !ENABLED_ISOVALUE)
 
@@ -84,7 +84,7 @@ void main()
     ivec2 colormap_pos  = ivec2(gl_LaunchSizeEXT.x * 0.75f,  gl_LaunchSizeEXT.y * 0.95f);
     ivec2 colormap_size = ivec2(gl_LaunchSizeEXT.x * 0.2f, gl_LaunchSizeEXT.y * 0.025f);        // horizontal
     //ivec2 colormap_size = ivec2(gl_LaunchSizeEXT.x * 0.025f, gl_LaunchSizeEXT.y * 0.2f);      // vertical
-    if( 
+    if( false&&
         //gl_LaunchIDEXT.x > colormap_pos.x && gl_LaunchIDEXT.x < (colormap_pos.x + colormap_size.x)  &&      // vertical
         gl_LaunchIDEXT.x < colormap_pos.x && gl_LaunchIDEXT.x > (colormap_pos.x - colormap_size.x)  &&      // horizontal
         gl_LaunchIDEXT.y < colormap_pos.y && gl_LaunchIDEXT.y > (colormap_pos.y - colormap_size.y)  )
@@ -416,7 +416,7 @@ void main()
         hitValues.rgb = Cin + (1 - ain) * C.rgb;
         hitValues.a = 1;
         
-        finalColor += hitValues;
+        finalColor += vec4((normal+1)/2.0f, 1);//hitValues;
         finalAO += (1.0f - ao);
     }
     finalColor *= 1.f / NBSAMPLES;
