@@ -54,11 +54,11 @@ mat3 calculateTransform(vec3 N);
 void render3dUIObjects(vec3 rayOrigin, vec3 rayDirection);
 vec3 refineISOSurface(vec3 rayOrigin, vec3 rayDirection, float stepSize, inout vec3 p, float t);
 
-#define ENABLED_ISOVALUE                      1
+#define ENABLED_ISOVALUE                      0
 #define ENABLED_REFINEMENT         (1 && ENABLED_ISOVALUE)
 #define ENABLED_DVR                (1 && !ENABLED_ISOVALUE)
 
-#define ENABLED_DEBUG_AMBIENT_OCCLUSION       0
+#define ENABLED_DEBUG_AMBIENT_OCCLUSION      0
 
 
 vec4 planeColor;
@@ -84,7 +84,7 @@ void main()
     ivec2 colormap_pos  = ivec2(gl_LaunchSizeEXT.x * 0.75f,  gl_LaunchSizeEXT.y * 0.95f);
     ivec2 colormap_size = ivec2(gl_LaunchSizeEXT.x * 0.2f, gl_LaunchSizeEXT.y * 0.025f);        // horizontal
     //ivec2 colormap_size = ivec2(gl_LaunchSizeEXT.x * 0.025f, gl_LaunchSizeEXT.y * 0.2f);      // vertical
-    if( false&&
+    if( 
         //gl_LaunchIDEXT.x > colormap_pos.x && gl_LaunchIDEXT.x < (colormap_pos.x + colormap_size.x)  &&      // vertical
         gl_LaunchIDEXT.x < colormap_pos.x && gl_LaunchIDEXT.x > (colormap_pos.x - colormap_size.x)  &&      // horizontal
         gl_LaunchIDEXT.y < colormap_pos.y && gl_LaunchIDEXT.y > (colormap_pos.y - colormap_size.y)  )
@@ -235,11 +235,27 @@ void main()
 
                         const int aoSampleCount = 16;
 
+                        /*vec3 testVec[4] = vec3[](normalize(vec3(-1, -1, 1)),
+                                                 normalize(vec3(-1,  1, 1)),
+                                                 normalize(vec3( 1, -1, 1)),
+                                                 normalize(vec3( 1,  1, 1)));
+
+                        testVec[0] = normalize(vec3(-1, -1, 1));
+                        testVec[1] = normalize(vec3(-1,  1, 1));
+                        testVec[2] = normalize(vec3( 1, -1, 1));
+                        testVec[3] = normalize(vec3( 1,  1, 1));
+
+                        vec3 sum = vec3(0);
+                        */
                         for(int d=0; d<aoSampleCount; ++d) {
-                            vec3 dir = normalize(tangentSpaceTransformation * ai.randomDirectionsOnSphere[d].xyz); // bring directions from world space to tanget space
+                            vec3 dir = normalize(tangentSpaceTransformation * ai.randomDirectionsOnHemisphere[d].xyz); // bring directions from world space to tanget space
+                            //vec3 dir = (tangentSpaceTransformation * testVec[d]); // bring directions from world space to tanget space
+              
+                            //sum +=dir ;
                             //if(dot(dir, -normal) < 0) {
                             //    dir = -dir;
                             //}                            
+                         
                             for(int s=1; s<500; ++s) {   // s = 2: to avoid self intersections
                                 vec3 p0 = p + dir * s * stepSize;       // 
                                 if(dot((p0 - ai.planePosition.xyz), ai.planeNormal.xyz) >= 0)   // point in the side of plane normal
@@ -257,8 +273,15 @@ void main()
                                     break;
                                 }
                             }
+                            
                         }
+
+                        //sum /= 4;
+
+                        //float amQezi = dot(-normal, sum);
+
                         ao /= aoSampleCount; // occuluded
+                        //ao = amQezi; // occuluded
                     }
 
                     // shadow ray
@@ -302,7 +325,7 @@ void main()
 
                     break;
                 }
-
+                
 #elif ENABLED_DVR
                 normal = calculateNormal(normalizedCoord);
                 
@@ -313,12 +336,12 @@ void main()
                     const int aoSampleCount = 16;
 
                     for(int d=0; d<aoSampleCount; ++d) {
-                        vec3 dir = normalize(tangentSpaceTransformation * ai.randomDirectionsOnHemisphere[d].xyz); // bring directions from world space to tanget space
+                        vec3 dir = normalize(tangentSpaceTransformation * ai.randomDirectionsOnSphere[d].xyz); // bring directions from world space to tanget space
                        // if(dot(dir, -normal) < 0) {
                        //     dir = -dir;
                        // }
                         float collectedOcclusion = 0.f;
-                        for(int s=2; s<32; ++s) {   // s = 2: to avoid self intersections
+                        for(int s=1; s<32; ++s) {   // s = 2: to avoid self intersections
                             vec3 p0 = p + dir * s * stepSize;       // 
                              if(dot((p0 - ai.planePosition.xyz), ai.planeNormal.xyz) >= 0)   // point in the side of plane normal
                                     break;
@@ -379,7 +402,7 @@ void main()
                 
                 vec3 ambientColor = ai.ambientColor.rgb;//vec3(1.f);
                 float diffuseMultiplier = 0.5f;
-                float ambientMultiplier = 0.8f;
+                float ambientMultiplier = 0.5f;
 
                 diffuse *= diffuseMultiplier;
                 ambientColor *= ambientMultiplier; 
@@ -416,7 +439,7 @@ void main()
         hitValues.rgb = Cin + (1 - ain) * C.rgb;
         hitValues.a = 1;
         
-        finalColor += vec4((normal+1)/2.0f, 1);//hitValues;
+        finalColor += hitValues;//vec4((normal+1)/2.0f;//
         finalAO += (1.0f - ao);
     }
     finalColor *= 1.f / NBSAMPLES;
@@ -509,16 +532,25 @@ vec3 computeDiffuseLighting(vec3 normal, vec3 cameraPosition, vec3 worldPosition
 
 mat3 calculateTransform(vec3 N)
 {
-  vec3 A = vec3(0.f, 1.f, 0.f);
+  vec3 A = vec3(1.f, 0.f, 0.f);
   
+  vec3 X;
+  vec3 Y;
+  vec3 Z;
+
   if(length(cross(A, N)) < 0.001f)
   {
-    A = vec3(0.f, 0.0f, 1.0f);
+    A = vec3(0.f, 0.0f, -1.0f);
+    X = cross(A, N);
+    Z = N;
+    Y = cross(Z, X);
   }
-
-  vec3 X = cross(N, A);
-  vec3 Y = cross(N, X);
-  vec3 Z = N;
+  else
+  {
+    Y = cross(A, N);
+    Z = N;
+    X = cross(Y, Z);
+  }
 
   X = normalize(X);
   Y = normalize(Y);
@@ -532,9 +564,10 @@ mat3 calculateTransform(vec3 N)
   //m1.translate(P);
 
 
-  mat3 m2 = mat3(vec3(X.x, Y.x, Z.x),
-                 vec3(X.y, Y.y, Z.y),
-                 vec3(X.z, Y.z, Z.z));
+  mat3 m2 = mat3(X, Y, Z);
+  //vec3(X.x, Y.x, Z.x),
+  //vec3(X.y, Y.y, Z.y),
+  //vec3(X.z, Y.z, Z.z));
   //m2 = transpose(m2);
 
   /* mat3 m2 = mat3(X,
