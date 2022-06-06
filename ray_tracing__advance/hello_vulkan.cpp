@@ -88,7 +88,7 @@ vec3 randomDirectionOnSphere() {
     z = distribution(generator);
   } while((x * x + y * y + z * z) > 1.f);
 
-  return nvmath::normalize(vec4(x, y, z, 0.f));  // to map the (x, y, z) on the semisphere, normalize it. Then we have: (x*x + y*y + z*z) == 1.f
+  return nvmath::normalize(vec4(x, y, z, 0.f));  // to map the (x, y, z) on the sphere, normalize it. Then we have: (x*x + y*y + z*z) == 1.f
 }
 
 void HelloVulkan::fillRandomDirections() {
@@ -377,7 +377,7 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
 {
   //return;
   SimVisDataPtr simVisPtr = SimVisData::loadFromFile(filePath);
-  //SimVisDataPtr simVisPtr = SimVisData::loadSphere(32);
+  //SimVisDataPtr simVisPtr = SimVisData::loadSphere(64);
   std::vector<MaterialObj> materials(128, MaterialObj());
   std::vector<std::string> textures;
 
@@ -557,15 +557,15 @@ void HelloVulkan::loadVolumetricData(const char* filePath, nvmath::mat4f transfo
   //m_objModel.emplace_back(model);
   m_objDesc.emplace_back(desc);
 
-  m_atrInfo.dimension       = vec4(numCellsX, numCellsY, numCellsZ, 1);
+  m_atrInfo.dimension       = vec4(numCellsX, numCellsY, numCellsZ, 1);  //vec4(1.f/numCellsX, 1.f/numCellsY, 1.f/numCellsZ, 1);  //vec4(numCellsX, numCellsY, numCellsZ, 1);
   m_atrInfo.minPoint        = vec4(0, 0, 0, 1);
-  m_atrInfo.ISOValue        = 0.077f;
+  m_atrInfo.ISOValue        = 0.201f;  // 0.194;  // 0.077f;
   m_atrInfo.stepSize        = 0.5f;
   m_atrInfo.minAtrValue     = min;
   m_atrInfo.maxAtrValue     = max;
   m_center                  = (m_atrInfo.dimension - m_atrInfo.minPoint)/2.f;
-  m_atrInfo.planeNormal     = vec4(1.f, 0.f, 0.f, 0.f);
-  m_atrInfo.planePosition   = m_center;
+  m_atrInfo.planeNormal     =   vec4(-0.618f, -0.762f, 0.191f, 0.f);   //vec4(1.f, 0.f, 0.f, 0.f);
+  m_atrInfo.planePosition =           vec4(61.714f, 48.f, 92.f, 1.f);  //m_center;
   m_atrInfo.useHeadLight    = 1;
   m_atrInfo.shadowRay    = 0;
   fillRandomDirections();   // to initiate m_atrInfo.randomDirections
@@ -909,9 +909,17 @@ void HelloVulkan::raytrace(const VkCommandBuffer& cmdBuf, const nvmath::vec4f& c
   nvmath::mat4f transformNormal = calculateTransform(
       vec3(m_atrInfo.planeNormal.x, m_atrInfo.planeNormal.y, m_atrInfo.planeNormal.z),
       vec3(m_atrInfo.planePosition.x, m_atrInfo.planePosition.y, m_atrInfo.planePosition.z), 20);
+  
+  /*float         radius = 210.f;
+  vec3          offset            = vec3(m_atrInfo.dimension/2.f);
+  vec3          dir               = m_pcRaster.lightDirection.normalize();
+  nvmath::mat4f transformLightDir =
+      calculateTransform(vec3(-m_pcRaster.lightDirection.x, -m_pcRaster.lightDirection.y, -m_pcRaster.lightDirection.z),
+      vec3(m_pcRaster.lightDirection.x * radius, m_pcRaster.lightDirection.y * radius, m_pcRaster.lightDirection.z * radius), 40);*/
 
   m_instances[0].transform = transform;
   m_instances[1].transform = transformNormal;
+  //m_instances[2].transform = transformLightDir;
 
   m_raytrace.createTopLevelAS(m_instances, m_implObjects, true);
   m_raytrace.updateRtDescriptorSetAccelStruct(m_offscreen.colorTexture().descriptor.imageView);

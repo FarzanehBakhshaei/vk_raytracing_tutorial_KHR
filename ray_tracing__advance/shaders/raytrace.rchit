@@ -189,8 +189,11 @@ void main()
 
   if(gl_InstanceID == 0)
     prd.hitValue = vec4(1.f, 0.f, 0.f, 1.f);//vec4(cLight.outIntensity * attenuation * (diffuse + specular), 0.f);
-  else
-    prd.hitValue = vec4(0.f, 0.f, 1.f, 1.f);//vec4(cLight.outIntensity * attenuation * (diffuse + specular), 0.f);
+  else if (gl_InstanceID == 1)
+    prd.hitValue = vec4(0.f, 0.f, 1.f, 1.f);
+  else // light direction vector
+    prd.hitValue = vec4(1.f, 1.f, 0.f, 1.f);
+  
   prd.tHit = gl_RayTmaxEXT ;
   
 #elif RAYTRACEVOLUME

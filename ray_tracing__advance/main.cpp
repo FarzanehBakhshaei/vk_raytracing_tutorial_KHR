@@ -116,6 +116,17 @@ void renderUI(HelloVulkan& helloVk)
   helloVk.m_atrInfo.useAmbinetOcclusion = useAmbinetOcclusion ? 1 : 0;
   //changed |=  ImGui::ColorEdit3("color", color);
    
+  
+ /* vgm::Vec3 lightDir(helloVk.m_pcRaster.lightDirection.x, helloVk.m_pcRaster.lightDirection.y,
+                     helloVk.m_pcRaster.lightDirection.z);
+
+  changed |= ImGui::gizmo3D("Light Direction", lightDir, 100, imguiGizmo::modeDirection);
+  helloVk.m_pcRaster.lightDirection.x = lightDir.x;
+  helloVk.m_pcRaster.lightDirection.y = lightDir.y;
+  helloVk.m_pcRaster.lightDirection.z = lightDir.z;
+   
+  ImGui::SameLine();*/
+  
   vgm::Vec3 dir(helloVk.m_atrInfo.planeNormal.x, helloVk.m_atrInfo.planeNormal.y, helloVk.m_atrInfo.planeNormal.z);
   changed |= ImGui::gizmo3D("Plane Normal", dir, 100, imguiGizmo::modeDirPlane);
   helloVk.m_atrInfo.planeNormal.x = dir.x;
@@ -123,6 +134,10 @@ void renderUI(HelloVulkan& helloVk)
   helloVk.m_atrInfo.planeNormal.z = dir.z;
   helloVk.m_atrInfo.planeNormal.w = 0.f;
   
+    //helloVk.m_pcRaster.lightDirection.w = 1.f;
+    // or explicitly
+    //if(ImGui::gizmo3D("##Dir1", lightDir, 100, imguiGizmo::modeDirection)  setLight(-light);
+
   //changed |= ImGui::SliderFloat3("Plane Normal", (float*)&helloVk.m_atrInfo.planeNormal, 0.0f, 360.0f);
 
   vgm::Vec3 pos(helloVk.m_atrInfo.planePosition.x, helloVk.m_atrInfo.planePosition.y, helloVk.m_atrInfo.planePosition.z);
@@ -145,6 +160,10 @@ void renderUI(HelloVulkan& helloVk)
   static bool shadowRay = false;
   changed |= ImGui::Checkbox("Shadow ray", &shadowRay);
   helloVk.m_atrInfo.shadowRay = shadowRay ? 1 : 0;
+  ImGui::SameLine();
+  static bool debugMode = false;
+  changed |= ImGui::Checkbox("Debug Mode", &debugMode);
+  helloVk.m_atrInfo.debugMode = debugMode ? 1 : 0;
 
   //changed |= ImGui::SliderInt("Max Frames", &helloVk.m_maxFrames, 1, 1000);
   if(changed)
@@ -155,8 +174,8 @@ void renderUI(HelloVulkan& helloVk)
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
-static int const SAMPLE_WIDTH  = 1280;
-static int const SAMPLE_HEIGHT = 720;
+  static int const SAMPLE_WIDTH  = 1280;  //800;  //2560;  //1920;  // 1600;  //1280;
+  static int const SAMPLE_HEIGHT = 720;   //600;   //1440;  //1080;  //900;  //720;
 
 
 //--------------------------------------------------------------------------------------------------
@@ -249,8 +268,8 @@ int main(int argc, char** argv)
   
   bool kitten = false;
   // Creation of the example
-  //helloVk.loadVolumetricData(nvh::findFile("media/scenes/femur3D_144_96_184_A_its400.dat", defaultSearchPaths, true).c_str());
-  helloVk.loadVolumetricData(nvh::findFile("media/scenes/kitten_132_115_200_its500.dat", defaultSearchPaths, true).c_str());kitten = true;
+  helloVk.loadVolumetricData(nvh::findFile("media/scenes/femur3D_144_96_184_A_its400.dat", defaultSearchPaths, true).c_str());
+  //helloVk.loadVolumetricData(nvh::findFile("media/scenes/kitten_132_115_200_its500.dat", defaultSearchPaths, true).c_str());kitten = true;
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/cantilever3D_256_128_128_iLoad3_R20_its500.dat", defaultSearchPaths, true).c_str());
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/testData1_snapshot.dat", defaultSearchPaths, true).c_str());
   //helloVk.loadVolumetricData(nvh::findFile("media/scenes/Bridge-R1081-G.dat", defaultSearchPaths, true).c_str());
@@ -258,7 +277,15 @@ int main(int argc, char** argv)
 
   vec3 camLookPoint = helloVk.m_atrInfo.minPoint + helloVk.m_atrInfo.dimension / 2.0f; 
 
-  CameraManip.setLookat({164, -347, 91}, camLookPoint, {0.000, 0.000, 1.000});
+  if(kitten)
+  //  CameraManip.setLookat({39.102, 258.486, 90.704}, {39.101, 54.875, 91.072}, {0.000, 1.000, 0.000});  // kitten
+  CameraManip.setLookat({232.554, -12.432, 96.862}, {43.418, 65.209, 89.214}, {0.000, 0.000, 1.000});  // kitten
+  else
+  {
+    CameraManip.setLookat({-34.470, -80.731, 144.758}, {72.000, 48.000, 92.000}, {0.000, 0.000, 1.000});  // femur
+    //kitten = true;
+  }
+  //CameraManip.setLookat({164, -347, 91}, camLookPoint, {0.000, 0.000, 1.000});
 
  /* nvmath::mat4f transform = helloVk.calculateTransform(
                                                vec3(helloVk.m_atrInfo.planeNormal.x, 
@@ -270,6 +297,7 @@ int main(int argc, char** argv)
   helloVk.loadModel(nvh::findFile("media/scenes/clipPlane2.obj", defaultSearchPaths, true));//, transform);
   //helloVk.loadModel(nvh::findFile("media/scenes/clipPlane.obj", defaultSearchPaths, true));  //, transform);
   helloVk.loadModel(nvh::findFile("media/scenes/normal.obj", defaultSearchPaths, true));
+  //helloVk.loadModel(nvh::findFile("media/scenes/normal.obj", defaultSearchPaths, true));
   //helloVk.loadModel(nvh::findFile("media/scenes/wuson.obj", defaultSearchPaths, true),
                     //nvmath::scale_mat4(nvmath::vec3f(0.5f)) * nvmath::translation_mat4(nvmath::vec3f(0.0f, 0.0f, 6.0f)));
 

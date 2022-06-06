@@ -88,7 +88,7 @@ public:
       {1},                    // Identity matrix
       {120.f, 70.f, 170.f},      // light position
       0,                      // instance Id
-      {0.07f, -0.33f, 0.56f},              // lightDirection;
+      {0.538f, 0.641f, 1.f},  //{0.07f, -0.33f, 0.56f},              // lightDirection;
       {cos(deg2rad(12.5f))},  // lightSpotCutoff;
       {cos(deg2rad(17.5f))},  // lightSpotOuterCutoff;
       1000.f,                  // light intensity

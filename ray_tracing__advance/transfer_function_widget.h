@@ -54,13 +54,11 @@ class TransferFunctionWidget {
     };
 
     std::vector<Colormap> colormaps;
-    size_t selected_colormap = 0;
+    size_t selected_colormap = 5;
     std::vector<uint8_t> current_colormap;
 
-    std::vector<vec2f> alpha_control_pts = {vec2f(0.f),          vec2f(0.14f, 0.f), vec2f(0.2f, 0.19f),
-                                            vec2f(0.33f, 0.19f), vec2f(0.41f, 0.02f), vec2f(0.58f, 0.02f),
-                                            vec2f(0.65f, 0.39f), vec2f(0.79f, 0.38f), vec2f(0.8f, 0.f),
-                                            vec2f(1.0f, 0.f)};
+    std::vector<vec2f> alpha_control_pts = {vec2f(0.f),        vec2f(0.1f, 0.f),  vec2f(0.14f, 1.f),
+                                            vec2f(0.47f, 1.f), vec2f(0.52f, 0.f), vec2f(1.0f, 0.f)};
     size_t selected_point = -1;
 
     bool clicked_on_item = false;

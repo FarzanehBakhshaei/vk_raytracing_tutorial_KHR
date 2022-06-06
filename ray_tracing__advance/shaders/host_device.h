@@ -90,7 +90,8 @@ struct AtrInfo
   int	useAmbinetOcclusion;
   int	useHeadLight;
   int   shadowRay;
-  int   padding1, padding2, padding3;
+  int   debugMode; 
+  int padding2, padding3;
   vec4  planeNormal;
   vec4  planePosition;
   vec4  minPoint;
